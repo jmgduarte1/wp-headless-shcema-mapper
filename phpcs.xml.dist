@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<ruleset name="HeadlessAngularSchema">
+    <description>Coding standards for headless-angular-schema WordPress plugin.</description>
+
+    <file>headless-angular-schema.php</file>
+    <file>src</file>
+    <file>tests</file>
+
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+
+    <arg name="basepath" value="."/>
+    <arg name="colors"/>
+    <arg name="extensions" value="php"/>
+    <arg name="parallel" value="8"/>
+    <arg name="warning-severity" value="0"/>
+    <arg value="ps"/>
+
+    <rule ref="PSR12"/>
+    <rule ref="WordPress.Security"/>
+
+    <!-- Modern PHP compatibility minimum -->
+    <config name="testVersion" value="8.2-"/>
+</ruleset>

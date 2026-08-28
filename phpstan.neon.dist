@@ -1,0 +1,13 @@
+includes:
+    - vendor/szepeviktor/phpstan-wordpress/extension.neon
+
+parameters:
+    level: 8
+    treatPhpDocTypesAsCertain: false
+    bootstrapFiles:
+        - phpstan-bootstrap.php
+    paths:
+        - headless-angular-schema.php
+        - src
+    excludePaths:
+        - vendor/*

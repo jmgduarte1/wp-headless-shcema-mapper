@@ -1,0 +1,57 @@
+{
+  "schemaVersion": "1.0",
+  "locale": "en-CA",
+  "page": {
+    "id": "42",
+    "slug": "home",
+    "title": "Home",
+    "status": "published",
+    "blocks": [
+      {
+        "id": "hero-main",
+        "type": "hero",
+        "data": {
+          "eyebrow": "Welcome",
+          "title": "Software Engineer",
+          "subtitle": "Building maintainable digital experiences",
+          "media": {
+            "placement": "end",
+            "image": {
+              "src": "https://cms.example.com/hero.webp",
+              "alt": "Software engineer",
+              "width": 800,
+              "height": 800
+            }
+          },
+          "actions": [
+            {
+              "id": "view-work",
+              "label": "View work",
+              "variant": "primary",
+              "link": {
+                "type": "internal",
+                "path": "/work"
+              }
+            }
+          ],
+          "layout": {
+            "contentAlignment": "start",
+            "verticalAlignment": "center",
+            "contentWidth": "wide"
+          }
+        },
+        "style": {
+          "variant": "primary",
+          "properties": {
+            "minHeight": "70vh",
+            "padding": {
+              "mobile": "32px 20px",
+              "desktop": "80px 64px"
+            }
+          }
+        }
+      }
+    ]
+  }
+}
+

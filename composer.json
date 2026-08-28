@@ -1,0 +1,47 @@
+{
+  "name": "headless-angular/headless-angular-schema",
+  "description": "WordPress plugin that maps Gutenberg content to a normalized PageSchema contract.",
+  "license": "proprietary",
+  "type": "wordpress-plugin",
+  "require": {
+    "php": ">=8.2"
+  },
+  "require-dev": {
+    "dealerdirect/phpcodesniffer-composer-installer": "^1.1",
+    "ergebnis/composer-normalize": "^2.52",
+    "phpunit/phpunit": "^11.5",
+    "szepeviktor/phpstan-wordpress": "^2.0",
+    "wp-coding-standards/wpcs": "^3.4",
+    "wp-phpunit/wp-phpunit": "^7.1"
+  },
+  "autoload": {
+    "psr-4": {
+      "HeadlessAngular\\Schema\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "HeadlessAngular\\Schema\\Tests\\": "tests/"
+    }
+  },
+  "config": {
+    "allow-plugins": {
+      "dealerdirect/phpcodesniffer-composer-installer": true,
+      "ergebnis/composer-normalize": true
+    },
+    "sort-packages": true
+  },
+  "scripts": {
+    "analyse": "phpstan analyse --memory-limit=512M",
+    "composer:check": "composer normalize --dry-run",
+    "cs": "phpcs",
+    "cs:fix": "phpcbf",
+    "quality": [
+      "@composer:check",
+      "@cs",
+      "@analyse",
+      "@test"
+    ],
+    "test": "phpunit"
+  }
+}

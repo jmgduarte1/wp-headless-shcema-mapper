@@ -1,0 +1,30 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "headless-angular/hero",
+  "version": "0.1.0",
+  "title": "Headless Angular Hero",
+  "category": "design",
+  "icon": "cover-image",
+  "description": "Collects normalized hero content for the PageSchema contract.",
+  "textdomain": "headless-angular-schema",
+  "attributes": {
+    "id": {
+      "type": "string"
+    },
+    "eyebrow": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "subtitle": {
+      "type": "string"
+    }
+  },
+  "supports": {
+    "align": false,
+    "html": false,
+    "customClassName": false
+  }
+}
