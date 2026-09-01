@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace HeadlessAngular\Schema\Rest;
 
 use HeadlessAngular\Schema\Builder\PageSchemaBuilder;
+use HeadlessAngular\Schema\Mapping\BasicBlockMapper;
 use HeadlessAngular\Schema\Mapping\BlockMapperRegistry;
 use HeadlessAngular\Schema\Mapping\HeroBlockMapper;
 use HeadlessAngular\Schema\Serialization\V1PageSchemaSerializer;
@@ -58,6 +59,7 @@ final class PageController
         try {
             $builder = new PageSchemaBuilder(
                 new BlockMapperRegistry([
+                    new BasicBlockMapper(),
                     new HeroBlockMapper(),
                 ]),
             );

@@ -10,6 +10,7 @@
       {
         "id": "hero-main",
         "type": "hero",
+        "element": "section",
         "data": {
           "eyebrow": "Welcome",
           "title": "Software Engineer",
@@ -54,4 +55,3 @@
     ]
   }
 }
-

@@ -1,7 +1,7 @@
 # M1 Implementation Progress — Hero Walking Skeleton
 
 ## Milestone Scope
-Deliver the complete end-to-end walking skeleton for WordPress `headless-angular/hero` mapping to normalized `PageSchema v1.0` JSON contract.
+Deliver the complete end-to-end walking skeleton for WordPress-authored Hero content mapping to normalized `PageSchema v1.0` JSON contract.
 
 ---
 
@@ -61,3 +61,70 @@ Deliver the complete end-to-end walking skeleton for WordPress `headless-angular
 
 ### Next
 - Add the first unit tests for `V1PageSchemaSerializer` and `HeroBlockMapper` so PHPUnit validates behavior instead of only confirming the test runner is wired.
+
+## 2026-08-28 — M1 Hero Mapping and Contract Tests
+
+### Completed
+- Expanded the `headless-angular/hero` block metadata with M1 attributes for media, actions, layout, and style.
+- Added editor, editor style, and frontend style assets for the Hero block.
+- Implemented Hero mapper normalization for title, eyebrow, subtitle, media placement, accessible media metadata, actions, internal/external/anchor links, layout enums, and the M1 style whitelist.
+- Preserved typed DTOs through mapping and serialized only at the `V1PageSchemaSerializer` boundary.
+- Added unit tests for Hero mapping, invalid Hero configurations, unsafe links, unsafe styles, optional omission, and canonical fixture serialization.
+
+### Validation
+- `composer quality` passes.
+- PHPUnit: 7 tests, 19 assertions.
+- PHPStan: level 8 passes.
+- PHPCS: PSR-12 plus WordPress security checks pass.
+
+### Notes
+- REST endpoint registration is wired and covered by static analysis, but full WordPress integration tests against a live `WP_REST_Server` are still pending.
+
+### Next
+- Add WordPress integration tests for plugin activation, REST route output, unknown slug 404, and draft boundary 404.
+
+## 2026-08-28 — WordPress Editor Compatibility Adjustment
+
+### Completed
+- Added the missing Gutenberg asset metadata for `blocks/hero/index.js` so WordPress can enqueue the custom Hero editor script with its required `wp-*` dependencies.
+- Added support for mapping native WordPress `core/cover` compositions into the M1 `hero` schema:
+  - `core/cover` becomes `type: "hero"`.
+  - The first nested `core/heading` becomes the Hero title.
+  - The first nested `core/paragraph` becomes the Hero subtitle.
+  - Nested `core/button` blocks become Hero actions.
+  - Cover image URL becomes background Hero media.
+  - Cover content position and min-height are normalized into Hero layout/style fields.
+- Updated the PageSchema builder to tolerate normal WordPress pages:
+  - Unsupported blocks are skipped instead of causing the whole endpoint to fail.
+  - Container blocks are traversed recursively so supported blocks can be found inside groups, columns, and other wrappers.
+
+### Validation
+- `composer quality` passes.
+- PHPUnit: 8 tests, 33 assertions.
+- PHPStan: level 8 passes.
+- PHPCS: PSR-12 plus WordPress security checks pass.
+- The local `home` endpoint returns PageSchema again even when the page also contains unsupported WordPress pattern blocks.
+
+### Notes
+- M1 no longer requires content authors to use only a proprietary Hero block. A Hero can be authored with native WordPress blocks using a Cover block containing Heading, Paragraph, and Buttons.
+- The custom `headless-angular/hero` block remains available as an explicit contract-first option, but the more natural WordPress editing path is now supported.
+
+## 2026-08-29 — Native Pattern Hero Mapping
+
+### Completed
+- Reworked the native WordPress Hero mapper around the real `Test Hero` page pattern at `/?page_id=12`.
+- Added support for a Hero authored as a native WordPress composition:
+  - outer `core/group` or `core/columns` container;
+  - image column using `core/cover`;
+  - content column using `core/heading` and one or more `core/paragraph` blocks;
+  - optional nested `core/buttons` / `core/button` CTA blocks.
+- The mapper now reads text from `innerHTML` when Gutenberg stores content there instead of in attributes.
+- The normalized block now emits `element: "section"` so Angular can later choose the correct semantic wrapper.
+- The endpoint preserves useful style intent from the WordPress pattern, including margin, content padding, media width, media aspect ratio, overlay color, and overlay opacity.
+
+### Validation
+- `composer quality` passes.
+- PHPUnit: 9 tests, 49 assertions.
+- PHPStan: level 8 passes.
+- PHPCS: PSR-12 plus WordPress security checks pass.
+- The local endpoint for `test-hero` returns a `hero` schema with title `The Stories Book`, image `book-image-landing.webp`, variant `media-split`, and `element: "section"`.

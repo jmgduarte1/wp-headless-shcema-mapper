@@ -6,6 +6,7 @@ namespace HeadlessAngular\Schema\Serialization;
 
 use HeadlessAngular\Schema\Domain\Schema\BlockStyle;
 use HeadlessAngular\Schema\Domain\Schema\BlockType;
+use HeadlessAngular\Schema\Domain\Schema\BasicBlockData;
 use HeadlessAngular\Schema\Domain\Schema\HeroAction;
 use HeadlessAngular\Schema\Domain\Schema\HeroBlockData;
 use HeadlessAngular\Schema\Domain\Schema\HeroMedia;
@@ -49,16 +50,42 @@ final class V1PageSchemaSerializer implements PageSchemaSerializer
         $payload = [
             'id' => $block->id,
             'type' => $block->type,
+            'element' => $block->element,
         ];
 
         if ($block->type === BlockType::HERO && $block->data instanceof HeroBlockData) {
             $payload['data'] = $this->serializeHeroData($block->data);
+        } elseif ($block->data instanceof BasicBlockData) {
+            $payload['data'] = $this->serializeBasicData($block->data);
         } else {
             throw new UnexpectedValueException('Unsupported PageSchema block data.');
         }
 
         if ($block->style instanceof BlockStyle) {
             $payload['style'] = $this->serializeStyle($block->style);
+        }
+
+        if ($block->children !== []) {
+            $payload['children'] = array_map(
+                fn (PageBlock $child): array => $this->serializeBlock($child),
+                $block->children,
+            );
+        }
+
+        return $payload;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function serializeBasicData(BasicBlockData $data): array
+    {
+        $payload = [];
+
+        foreach (get_object_vars($data) as $key => $value) {
+            if ($value !== null && $value !== []) {
+                $payload[$key] = $value;
+            }
         }
 
         return $payload;
@@ -69,13 +96,13 @@ final class V1PageSchemaSerializer implements PageSchemaSerializer
      */
     private function serializeHeroData(HeroBlockData $data): array
     {
-        $payload = [
-            'title' => $data->title,
-        ];
+        $payload = [];
 
         if ($data->eyebrow !== null) {
             $payload['eyebrow'] = $data->eyebrow;
         }
+
+        $payload['title'] = $data->title;
 
         if ($data->subtitle !== null) {
             $payload['subtitle'] = $data->subtitle;
@@ -162,12 +189,13 @@ final class V1PageSchemaSerializer implements PageSchemaSerializer
         $payload = [
             'id' => $action->id,
             'label' => $action->label,
-            'link' => $this->serializeLink($action->link),
         ];
 
         if ($action->variant !== null) {
             $payload['variant'] = $action->variant->value;
         }
+
+        $payload['link'] = $this->serializeLink($action->link);
 
         if ($action->accessibleLabel !== null) {
             $payload['accessibleLabel'] = $action->accessibleLabel;

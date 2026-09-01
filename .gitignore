@@ -15,4 +15,5 @@ Thumbs.db
 .idea/
 .vscode/
 *.log
+test.json
 

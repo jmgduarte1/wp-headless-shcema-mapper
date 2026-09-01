@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace HeadlessAngular\Schema\Builder;
 
 use HeadlessAngular\Schema\Domain\Schema\PageDefinition;
+use HeadlessAngular\Schema\Domain\Schema\PageBlock;
 use HeadlessAngular\Schema\Domain\Schema\PageSchema;
 use HeadlessAngular\Schema\Domain\Schema\PageStatus;
 use HeadlessAngular\Schema\Mapping\BlockMapperRegistry;
+use InvalidArgumentException;
 
 final readonly class PageSchemaBuilder
 {
@@ -18,15 +20,7 @@ final readonly class PageSchemaBuilder
 
     public function build(\WP_Post $post, string $locale): PageSchema
     {
-        $blocks = [];
-
-        foreach (parse_blocks($post->post_content) as $block) {
-            if (!is_array($block) || ($block['blockName'] ?? null) === null) {
-                continue;
-            }
-
-            $blocks[] = $this->mapperRegistry->map($block);
-        }
+        $blocks = $this->mapBlocks(parse_blocks($post->post_content));
 
         return new PageSchema(
             locale: $locale,
@@ -38,5 +32,30 @@ final readonly class PageSchemaBuilder
                 blocks: $blocks,
             ),
         );
+    }
+
+    /**
+     * @param array<mixed> $rawBlocks
+     *
+     * @return list<PageBlock>
+     */
+    private function mapBlocks(array $rawBlocks): array
+    {
+        $mappedBlocks = [];
+
+        foreach ($rawBlocks as $rawBlock) {
+            if (!is_array($rawBlock) || ($rawBlock['blockName'] ?? null) === null) {
+                continue;
+            }
+
+            try {
+                $mappedBlocks[] = $this->mapperRegistry->map($rawBlock);
+            } catch (InvalidArgumentException) {
+                $innerBlocks = is_array($rawBlock['innerBlocks'] ?? null) ? $rawBlock['innerBlocks'] : [];
+                $mappedBlocks = array_merge($mappedBlocks, $this->mapBlocks($innerBlocks));
+            }
+        }
+
+        return $mappedBlocks;
     }
 }
