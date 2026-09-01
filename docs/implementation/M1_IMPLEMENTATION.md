@@ -1,4 +1,8 @@
-# M1 Implementation Progress — Hero Walking Skeleton
+# M1 Implementation Progress — Native Blocks Walking Skeleton
+
+## Current M1 Baseline
+
+M1 is now defined around editable native Gutenberg blocks, not a proprietary Hero block. The current vertical slice covers page metadata/title, structural containers, nested groups and columns, headings, paragraphs, images, links/buttons, spacers, details/summary disclosures, controlled styles, PageSchema validation, Angular registry rendering, and SSR/hydration boundaries. Composed blocks such as Hero remain deferred.
 
 ## Milestone Scope
 Deliver the complete end-to-end walking skeleton for WordPress-authored Hero content mapping to normalized `PageSchema v1.0` JSON contract.

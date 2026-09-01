@@ -1,7 +1,7 @@
 # PageSchema M1 Contract Definitions
 ## Private Implementation Contract — TypeScript / PHP 8.2
 
-**Status:** Frozen for M1 implementation — Revision 1  
+**Status:** Rebaselined for M1 native-block implementation — Revision 2
 **Classification:** Private / Internal  
 **Project:** Headless Angular Renderer  
 **Schema Version:** `1.0`  
@@ -12,7 +12,9 @@
 
 # 1. Purpose
 
-This document freezes the minimum PageSchema contract required for Milestone M1 (Walking Skeleton).
+This document defines the minimum PageSchema contract required for Milestone M1 (Native Blocks Walking Skeleton). It supersedes the earlier Hero-only draft below wherever the two descriptions differ.
+
+M1 is based on editable native Gutenberg blocks. A composed Hero block/component is deferred to a later milestone.
 
 M1 proves the complete pipeline:
 
@@ -53,15 +55,12 @@ PageStatus
 PageSchema
 PageDefinition
 PageBlock
-HeroBlockData
-HeroBlock
-HeroMedia
-HeroAction
-HeroLayout
+BasicBlockData
 MediaAsset
 LinkModel
 BlockStyle
 ResponsiveStyleValue
+children
 ```
 
 The Hero is intentionally realistic rather than a title/subtitle-only placeholder. It validates reusable media, link, semantic-layout, style, accessibility, SSR, and hydration boundaries in the first vertical slice.
@@ -69,7 +68,6 @@ The Hero is intentionally realistic rather than a title/subtitle-only placeholde
 Explicitly deferred:
 
 ```text
-children / recursive composition
 SEO
 page-level theme
 navigation endpoint
@@ -88,7 +86,7 @@ Those remain part of the broader PageSchema v1 architecture but are not required
 M1 also freezes these implementation decisions:
 
 - Hero CTAs are represented only by `actions[]`.
-- `children` is a future field for M2. If a block includes `children` during M1, Angular ignores that field and does not pass it to the renderer.
+- `children` is part of M1 for structural blocks such as groups, sections, columns, and details.
 - `generatedAt` is not part of the frozen M1 payload. The M1 validator rejects it until the contract is deliberately expanded.
 - M1 style validation accepts only `minHeight`, `padding`, `backgroundColor`, `color`, `fontFamily`, `fontSize`, and `letterSpacing`.
 - Angular validation is implemented as a lightweight internal layer behind `PageSchemaValidator`.
@@ -212,7 +210,7 @@ Rules:
 - `type` is required.
 - `data` is optional at the generic level.
 - Concrete core blocks may make `data` mandatory.
-- M1 does not implement `children`; if present, it is treated as a future field and ignored by the M1 Angular validator/normalizer.
+- M1 implements `children` for structural blocks; the Angular validator/renderer preserves the nested hierarchy.
 
 ---
 
@@ -1200,7 +1198,7 @@ where appropriate.
 
 ---
 
-# 28. M1 Contract Freeze
+# 28. M1 Contract Freeze (Revision 1, Superseded)
 
 The following shape is now frozen for implementation:
 

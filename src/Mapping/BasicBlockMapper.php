@@ -78,7 +78,7 @@ final class BasicBlockMapper implements BlockMapper
                 $attributes['columnCount'] = $columnCount;
             }
         }
-        
+
         return new PageBlock(
             id: $this->blockId($block, $layout, $index),
             type: BlockType::CONTAINER,
@@ -477,8 +477,6 @@ final class BasicBlockMapper implements BlockMapper
         $presetBackgroundColor = $this->optionalString($attrs, 'backgroundColor');
         $textColor = $this->nestedString($attrs, ['style', 'color', 'text']);
         $presetTextColor = $this->optionalString($attrs, 'textColor');
-        $fontSize = $this->nestedString($attrs, ['style', 'typography', 'fontSize']);
-        $presetFontSize = $this->optionalString($attrs, 'fontSize');
 
         if ($background !== null) {
             $properties['background'] = $this->normalizeWordPressStyleValue($background);
@@ -496,10 +494,75 @@ final class BasicBlockMapper implements BlockMapper
             $properties['color'] = $this->presetStyleValue('color', $presetTextColor);
         }
 
+        // Typography
+        $fontSize = $this->nestedString($attrs, ['style', 'typography', 'fontSize']) ?? $this->optionalString($attrs, 'fontSize');
+        $fontFamily = $this->nestedString($attrs, ['style', 'typography', 'fontFamily']);
+        $presetFontFamily = $this->optionalString($attrs, 'fontFamily');
+        $fontWeight = $this->nestedString($attrs, ['style', 'typography', 'fontWeight']) ?? $this->optionalString($attrs, 'fontWeight');
+        $letterSpacing = $this->nestedString($attrs, ['style', 'typography', 'letterSpacing']) ?? $this->optionalString($attrs, 'letterSpacing');
+        $textTransform = $this->nestedString($attrs, ['style', 'typography', 'textTransform']) ?? $this->optionalString($attrs, 'textTransform');
+        $lineHeight = $this->nestedString($attrs, ['style', 'typography', 'lineHeight']) ?? $this->optionalString($attrs, 'lineHeight');
+        $fontStyle = $this->nestedString($attrs, ['style', 'typography', 'fontStyle']) ?? $this->optionalString($attrs, 'fontStyle');
+        $textDecoration = $this->nestedString($attrs, ['style', 'typography', 'textDecoration']) ?? $this->optionalString($attrs, 'textDecoration');
+
         if ($fontSize !== null) {
             $properties['fontSize'] = $this->normalizeWordPressStyleValue($fontSize);
         } elseif ($presetFontSize !== null) {
             $properties['fontSize'] = $this->presetStyleValue('font-size', $presetFontSize);
+        }
+
+        if ($fontFamily !== null) {
+            $properties['fontFamily'] = $this->normalizeWordPressStyleValue($fontFamily);
+        } elseif ($presetFontFamily !== null) {
+            $properties['fontFamily'] = $this->presetStyleValue('font-family', $presetFontFamily);
+        }
+
+        if ($fontWeight !== null) {
+            $properties['fontWeight'] = $this->normalizeWordPressStyleValue($fontWeight);
+        }
+        if ($letterSpacing !== null) {
+            $properties['letterSpacing'] = $this->normalizeWordPressStyleValue($letterSpacing);
+        }
+        if ($textTransform !== null) {
+            $properties['textTransform'] = $this->normalizeWordPressStyleValue($textTransform);
+        }
+        if ($lineHeight !== null) {
+            $properties['lineHeight'] = $this->normalizeWordPressStyleValue($lineHeight);
+        }
+        if ($fontStyle !== null) {
+            $properties['fontStyle'] = $this->normalizeWordPressStyleValue($fontStyle);
+        }
+        if ($textDecoration !== null) {
+            $properties['textDecoration'] = $this->normalizeWordPressStyleValue($textDecoration);
+        }
+
+        // Borders
+        $radius = $attrs['style']['border']['radius'] ?? null;
+        if (is_array($radius)) {
+            $properties['borderRadius'] = $this->spacingValue($radius);
+        } elseif (is_string($radius) || is_int($radius) || is_float($radius)) {
+            $properties['borderRadius'] = $this->normalizeWordPressStyleValue($radius);
+        }
+
+        $borderColor = $this->nestedString($attrs, ['style', 'border', 'color']);
+        $presetBorderColor = $this->optionalString($attrs, 'borderColor');
+        $borderWidth = $this->nestedString($attrs, ['style', 'border', 'width']);
+        $borderStyle = $this->nestedString($attrs, ['style', 'border', 'style']);
+
+        if ($borderColor !== null) {
+            $properties['borderColor'] = $this->normalizeWordPressStyleValue($borderColor);
+        } elseif ($presetBorderColor !== null) {
+            $properties['borderColor'] = $this->presetStyleValue('color', $presetBorderColor);
+        }
+
+        if ($borderWidth !== null) {
+            $properties['borderWidth'] = $this->normalizeWordPressStyleValue($borderWidth);
+        }
+
+        if ($borderStyle !== null) {
+            $properties['borderStyle'] = $this->normalizeWordPressStyleValue($borderStyle);
+        } elseif (($borderColor !== null || $presetBorderColor !== null || $borderWidth !== null) && !isset($properties['borderStyle'])) {
+            $properties['borderStyle'] = 'solid';
         }
 
         $verticalAlignment = $this->optionalString($attrs, 'verticalAlignment');

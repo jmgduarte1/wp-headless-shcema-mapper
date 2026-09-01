@@ -3,7 +3,7 @@
 **Classification:** Private / Internal  
 **Applies to:** `headless-angular-schema` and `@headless-angular/renderer`  
 **Contract:** `PageSchema v1`  
-**M1 Contract Status:** Frozen
+**M1 Contract Status:** Rebaselined for native Gutenberg blocks
 
 ---
 
@@ -50,21 +50,17 @@ PageStatus
 PageSchema
 PageDefinition
 PageBlock
-HeroBlock
-HeroBlockData
-HeroMedia
-HeroAction
-HeroLayout
+BasicBlockData
 MediaAsset
 LinkModel
 BlockStyle
 ResponsiveStyleValue
+children
 ```
 
 Deferred beyond M1:
 
 ```text
-recursive children
 SEO
 page-level theme
 navigation endpoint
@@ -73,17 +69,18 @@ animations
 visibility
 tracking
 data sources
-custom blocks
+composed blocks such as Hero
 advanced responsive media
 advanced style properties
 ```
 
 M1 implementation decisions:
 
-- `actions[]` is the official Hero CTA shape. Fixed fields such as `primaryAction` are not part of the M1 contract.
-- `children` is not implemented in M1. If present in received block data, the M1 Angular validator/normalizer treats it as a future field and ignores it rather than failing the whole payload.
+- M1 is based on native Gutenberg blocks and preserves nested `children`; it does not require a proprietary `hero` block.
+- Links and buttons use the normalized `LinkModel` shape. A composed Hero action model is deferred to a later milestone.
+- `children` is part of the M1 contract for structural blocks such as sections, groups, columns, and details.
 - `generatedAt` is part of the broader PageSchema v1 design, but it is excluded from the frozen M1 payload and should be rejected by the M1 validator until the contract is deliberately expanded.
-- The M1 style whitelist is limited to `minHeight`, `padding`, `backgroundColor`, `color`, `fontFamily`, `fontSize`, and `letterSpacing`.
+- The M1 style whitelist is limited to the properties documented by the current PHP and Angular implementations, including layout, spacing, color/background, typography, dimensions, and alignment values.
 - Angular runtime validation for M1 uses a lightweight internal validation layer behind `PageSchemaValidator`, not an external schema library.
 - Initial implementation targets the latest stable Angular and WordPress versions available when development begins, while preserving the documented PHP `8.2` minimum.
 
@@ -209,49 +206,26 @@ server filesystem paths
 
 ---
 
-# 6. Shared Hero Semantics
+# 6. Shared Native Block Semantics
 
-The Hero supports:
+M1 supports these normalized block families:
 
 ```text
-eyebrow?
-title
-subtitle?
-media?
-  image
-  placement: background | start | end
-actions[]
-  id
-  label
-  variant
-  LinkModel
-  accessibleLabel?
-layout?
-  contentAlignment
-  verticalAlignment
-  contentWidth
+section/div containers
+columns and column children
+headings and paragraphs
+images
+links and buttons
+details/summary disclosures
+spacers
+children?
 style?
-  variant
   whitelisted properties
 ```
 
 The schema describes intent.
 
-Examples:
-
-```text
-placement = "background"
-```
-
-means the media is conceptually a hero background.
-
-```text
-placement = "end"
-```
-
-means the renderer should place media after the content in the logical layout.
-
-Exact DOM/CSS implementation belongs to Angular.
+The schema describes intent and hierarchy. Exact DOM/CSS implementation belongs to Angular.
 
 ---
 
@@ -388,16 +362,17 @@ Angular package 0.9.0 → PageSchema 1.x
 
 M1 is accepted when:
 
-1. A Hero is configured in Gutenberg.
+1. A page is configured in Gutenberg using editable native blocks.
 2. WordPress normalizes it into canonical PageSchema JSON.
 3. Angular validates the JSON at runtime.
-4. Angular resolves `hero` through a component registry.
-5. A native Angular Hero component renders it.
-6. SSR contains Hero content in the initial HTML.
-7. Hydration completes without mismatch.
-8. The initial client does not duplicate the server fetch unnecessarily.
-9. Invalid contract data fails safely.
-10. Draft content is not exposed through the public page endpoint.
+4. Angular resolves supported basic block types through a component registry.
+5. The renderer outputs the page title and semantic native elements for the supported blocks.
+6. Nested composition, child order, columns, alignment, and supported styles are preserved.
+7. SSR contains the page content in the initial HTML.
+8. Hydration completes without mismatch.
+9. The initial client does not duplicate the server fetch unnecessarily.
+10. Invalid contract data fails safely.
+11. Draft content is not exposed through the public page endpoint.
 
 ---
 

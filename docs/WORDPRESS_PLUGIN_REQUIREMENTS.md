@@ -6,7 +6,7 @@
 **Plugin Name:** `headless-angular-schema`  
 **Minimum PHP:** 8.2  
 **Shared Contract:** `PageSchema v1`  
-**Initial Milestone:** M1 — Hero Walking Skeleton
+**Initial Milestone:** M1 — Native Blocks Walking Skeleton
 
 ---
 
@@ -65,14 +65,14 @@ Required:
 }
 ```
 
-For M1:
+For M1, native Gutenberg blocks are mapped to stable, consumer-facing block types. The contract must not require a custom block that WordPress cannot edit without an additional registration package.
 
 ```text
-headless-angular/hero
+core/group, core/columns, core/heading, ...
       ↓
-HeroBlockMapper
+BasicBlockMapper
       ↓
-type = "hero"
+PageSchema basic blocks
 ```
 
 ---
@@ -172,10 +172,9 @@ PageStatus
 PageSchema
 PageDefinition
 PageBlock
-HeroBlockData
-HeroMedia
-HeroAction
-HeroLayout
+BasicBlockData
+BlockStyle
+ResponsiveStyleValue
 MediaAsset
 LinkModel implementations
 BlockStyle
@@ -209,58 +208,20 @@ The serializer emits the version owned by the implementation.
 
 # 8. Gutenberg Hero Block
 
-The initial custom block should support:
+The initial native block set should support:
 
 ```text
-eyebrow
-title
-subtitle
-media
-media placement
-actions
-semantic layout
+page title
+sections and div containers
+columns and nested children
+headings and paragraphs
+images
+links and buttons
+details/summary disclosures
 M1 styles
 ```
 
-## Media placement
-
-Allowed:
-
-```text
-background
-start
-end
-```
-
-## Hero actions
-
-Each action includes:
-
-```text
-id
-label
-link
-variant
-accessibleLabel?
-```
-
-Initial variants:
-
-```text
-primary
-secondary
-tertiary
-```
-
-## Layout
-
-Allowed semantic configuration:
-
-```text
-contentAlignment: start | center | end
-verticalAlignment: start | center | end
-contentWidth: narrow | medium | wide | full
-```
+The plugin preserves the native block's semantic element, content, child order, media metadata, link intent, and supported layout/style attributes. Composed patterns such as a Hero are not an M1 plugin requirement.
 
 ---
 
@@ -294,7 +255,7 @@ interface BlockMapper
 }
 ```
 
-The Hero mapper:
+The basic block mapper:
 
 ```text
 raw Gutenberg block
@@ -303,9 +264,9 @@ validate attributes
     ↓
 normalize values
     ↓
-typed Hero DTOs
-    ↓
-PageBlock(type = "hero")
+typed basic block DTOs
+      ↓
+PageBlock(type = normalized basic block type)
 ```
 
 The mapper must not directly emit REST JSON.
@@ -314,18 +275,14 @@ The mapper must not directly emit REST JSON.
 
 # 11. Mapper Validation
 
-Hero mapper must validate:
+The mapper must validate:
 
 ```text
-title present and valid
-eyebrow optional string
-subtitle optional string
+required block data
+text content
 media structure
-media placement
 alt/decorative rules
-actions array
-action link types
-action variants
+link types and protocols
 layout values
 M1 style whitelist
 safe style values
@@ -396,8 +353,7 @@ WordPress-side security must include:
 - sanitize rich/user-entered values appropriate to their semantic type;
 - validate URLs;
 - restrict link protocols;
-- restrict Hero media placement;
-- restrict CTA variants;
+- restrict media and link values;
 - restrict layout enum values;
 - restrict style property names;
 - validate style values;
@@ -429,7 +385,7 @@ Target consumer behavior is WCAG 2.1 AA.
 M1 tests:
 
 ```text
-Hero mapper unit tests
+native block mapper unit tests
 PageSchema builder tests
 serializer tests
 REST endpoint tests
@@ -445,7 +401,7 @@ Must verify:
 - page ID serialized as string;
 - PageStatus serialized correctly;
 - absent optionals omitted;
-- invalid Hero title fails;
+- invalid required block data fails;
 - invalid media fails;
 - invalid link fails;
 - unsupported styles rejected/dropped according to policy;
@@ -477,19 +433,15 @@ Must verify:
 
 ## Gutenberg
 
-- [ ] Register Hero block.
-- [ ] Editor fields.
-- [ ] Media selector.
-- [ ] Media placement.
-- [ ] CTA editor.
-- [ ] Hero layout controls.
-- [ ] M1 style controls.
+- [x] Use native Gutenberg blocks in the editor.
+- [x] Preserve native block attributes and nested children.
+- [x] Map supported media, links, and M1 styles.
 
 ## Mapping
 
 - [ ] Mapper interface.
 - [ ] Mapper registry.
-- [ ] Hero mapper.
+- [x] Basic native block mapper.
 - [ ] Normalization rules.
 
 ## Serialization/API
@@ -514,12 +466,12 @@ Must verify:
 
 The PHP project is M1-complete when:
 
-1. Hero can be configured in Gutenberg.
-2. Plugin parses and maps it into typed DTOs.
+1. A page can be configured in Gutenberg using supported native blocks.
+2. The plugin parses and maps the blocks, including nesting, into typed DTOs.
 3. Serializer outputs canonical PageSchema JSON.
 4. Endpoint exposes only published content.
 5. Contract fixtures pass.
-6. Invalid Hero configuration fails safely.
+6. Invalid block configuration fails safely.
 7. No Angular-specific implementation detail exists in the plugin.
 8. JSON is ready for an independent Angular client to consume.
 

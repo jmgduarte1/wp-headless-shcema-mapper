@@ -90,5 +90,57 @@ final class BasicBlockMapperTest extends TestCase
         self::assertSame('column', $col3->data->layout);
         self::assertArrayNotHasKey('width', $col3->style?->properties ?? []);
     }
-}
 
+    public function testMapsTypographyAndBorderStyles(): void
+    {
+        $mapper = new BasicBlockMapper();
+        $block = $mapper->map([
+            'blockName' => 'core/paragraph',
+            'attrs' => [
+                'content' => 'Pill Badge Text',
+                'fontFamily' => 'roboto',
+                'backgroundColor' => 'accent-5',
+                'textColor' => 'contrast',
+                'style' => [
+                    'typography' => [
+                        'fontWeight' => '600',
+                        'letterSpacing' => '1px',
+                        'textTransform' => 'uppercase',
+                    ],
+                    'border' => [
+                        'radius' => '9999px',
+                        'width' => '1px',
+                        'color' => '#007cba',
+                    ],
+                    'spacing' => [
+                        'padding' => [
+                            'top' => '8px',
+                            'bottom' => '8px',
+                            'left' => '24px',
+                            'right' => '24px',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        self::assertSame(BlockType::TEXT, $block->type);
+        self::assertNotNull($block->style);
+        self::assertSame('var(--wp--preset--font-family--roboto)', $block->style->properties['fontFamily']);
+        self::assertSame('var(--wp--preset--color--accent-5)', $block->style->properties['backgroundColor']);
+        self::assertSame('var(--wp--preset--color--contrast)', $block->style->properties['color']);
+        self::assertSame('600', $block->style->properties['fontWeight']);
+        self::assertSame('1px', $block->style->properties['letterSpacing']);
+        self::assertSame('uppercase', $block->style->properties['textTransform']);
+        self::assertSame('9999px', $block->style->properties['borderRadius']);
+        self::assertSame('1px', $block->style->properties['borderWidth']);
+        self::assertSame('#007cba', $block->style->properties['borderColor']);
+        self::assertSame('solid', $block->style->properties['borderStyle']);
+        self::assertSame([
+            'top' => '8px',
+            'bottom' => '8px',
+            'left' => '24px',
+            'right' => '24px',
+        ], $block->style->properties['padding']);
+    }
+}
