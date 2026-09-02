@@ -19,6 +19,9 @@ use HeadlessAngular\Schema\Domain\Schema\PageBlock;
 use HeadlessAngular\Schema\Domain\Schema\PageDefinition;
 use HeadlessAngular\Schema\Domain\Schema\PageSchema;
 use HeadlessAngular\Schema\Domain\Schema\PageStatus;
+use HeadlessAngular\Schema\Domain\Schema\RobotsMetadata;
+use HeadlessAngular\Schema\Domain\Schema\SeoMetadata;
+use HeadlessAngular\Schema\Domain\Schema\SocialCardMetadata;
 use HeadlessAngular\Schema\Serialization\V1PageSchemaSerializer;
 use PHPUnit\Framework\TestCase;
 
@@ -113,5 +116,33 @@ final class V1PageSchemaSerializerTest extends TestCase
 
         self::assertSame(['title' => 'Hello'], $actual['page']['blocks'][0]['data']);
         self::assertArrayNotHasKey('style', $actual['page']['blocks'][0]);
+    }
+
+    public function testSerializesSeoMetadata(): void
+    {
+        $schema = new PageSchema(
+            locale: 'en-CA',
+            page: new PageDefinition(
+                id: '42',
+                slug: 'home',
+                title: 'Home',
+                status: PageStatus::Published,
+                blocks: [],
+                seo: new SeoMetadata(
+                    title: 'Home | Example',
+                    description: 'A concise page description.',
+                    canonical: 'https://example.com/home',
+                    robots: new RobotsMetadata(),
+                    twitter: new SocialCardMetadata(card: 'summary_large_image'),
+                ),
+            ),
+        );
+
+        $seo = (new V1PageSchemaSerializer())->serialize($schema)['page']['seo'];
+
+        self::assertSame('Home | Example', $seo['title']);
+        self::assertSame('https://example.com/home', $seo['canonical']);
+        self::assertSame(['index' => true, 'follow' => true], $seo['robots']);
+        self::assertSame('summary_large_image', $seo['twitter']['card']);
     }
 }

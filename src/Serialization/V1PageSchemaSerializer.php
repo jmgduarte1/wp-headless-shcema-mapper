@@ -17,6 +17,10 @@ use HeadlessAngular\Schema\Domain\Schema\Link\LinkModel;
 use HeadlessAngular\Schema\Domain\Schema\MediaAsset;
 use HeadlessAngular\Schema\Domain\Schema\PageBlock;
 use HeadlessAngular\Schema\Domain\Schema\PageSchema;
+use HeadlessAngular\Schema\Domain\Schema\OpenGraphMetadata;
+use HeadlessAngular\Schema\Domain\Schema\RobotsMetadata;
+use HeadlessAngular\Schema\Domain\Schema\SeoMetadata;
+use HeadlessAngular\Schema\Domain\Schema\SocialCardMetadata;
 use UnexpectedValueException;
 
 final class V1PageSchemaSerializer implements PageSchemaSerializer
@@ -26,7 +30,7 @@ final class V1PageSchemaSerializer implements PageSchemaSerializer
      */
     public function serialize(PageSchema $schema): array
     {
-        return [
+        $page = [
             'schemaVersion' => PageSchema::VERSION,
             'locale' => $schema->locale,
             'page' => [
@@ -40,6 +44,69 @@ final class V1PageSchemaSerializer implements PageSchemaSerializer
                 ),
             ],
         ];
+
+        $seo = $this->serializeSeo($schema->page->seo);
+        if ($seo !== null) {
+            $page['page']['seo'] = $seo;
+        }
+
+        return $page;
+    }
+
+    /** @return array<string, mixed>|null */
+    private function serializeSeo(?SeoMetadata $seo): ?array
+    {
+        if ($seo === null) {
+            return null;
+        }
+
+        $payload = array_filter([
+            'title' => $seo->title,
+            'description' => $seo->description,
+            'canonical' => $seo->canonical,
+            'robots' => $this->serializeRobots($seo->robots),
+            'openGraph' => $this->serializeOpenGraph($seo->openGraph),
+            'twitter' => $this->serializeSocialCard($seo->twitter),
+        ], static fn (mixed $value): bool => $value !== null);
+
+        return $payload !== [] ? $payload : null;
+    }
+
+    /** @return array<string, bool>|null */
+    private function serializeRobots(?RobotsMetadata $robots): ?array
+    {
+        return $robots === null ? null : ['index' => $robots->index, 'follow' => $robots->follow];
+    }
+
+    /** @return array<string, mixed>|null */
+    private function serializeOpenGraph(?OpenGraphMetadata $openGraph): ?array
+    {
+        if ($openGraph === null) {
+            return null;
+        }
+
+        return array_filter([
+            'title' => $openGraph->title,
+            'description' => $openGraph->description,
+            'url' => $openGraph->url,
+            'type' => $openGraph->type,
+            'image' => $openGraph->image === null ? null : $this->serializeMediaAsset($openGraph->image),
+        ], static fn (mixed $value): bool => $value !== null);
+    }
+
+    /** @return array<string, mixed>|null */
+    private function serializeSocialCard(?SocialCardMetadata $twitter): ?array
+    {
+        if ($twitter === null) {
+            return null;
+        }
+
+        return array_filter([
+            'card' => $twitter->card,
+            'title' => $twitter->title,
+            'description' => $twitter->description,
+            'image' => $twitter->image === null ? null : $this->serializeMediaAsset($twitter->image),
+        ], static fn (mixed $value): bool => $value !== null);
     }
 
     /**

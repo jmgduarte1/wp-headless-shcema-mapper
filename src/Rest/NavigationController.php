@@ -26,6 +26,10 @@ final class NavigationController
                         'required' => true,
                         'sanitize_callback' => 'sanitize_key',
                     ],
+                    'locale' => [
+                        'required' => false,
+                        'sanitize_callback' => 'sanitize_text_field',
+                    ],
                 ],
             ],
         );
@@ -34,6 +38,7 @@ final class NavigationController
     public function show(WP_REST_Request $request): WP_REST_Response|WP_Error
     {
         $location = (string) $request->get_param('location');
+        $locale = (string) ($request->get_param('locale') ?: get_locale());
         $locations = get_nav_menu_locations();
         $menuId = $locations[$location] ?? 0;
 
@@ -44,6 +49,7 @@ final class NavigationController
                 if ($items !== null) {
                     return new WP_REST_Response([
                         'schemaVersion' => '1.0',
+                        'locale' => $locale,
                         'location' => $location,
                         'items' => $items,
                     ], 200);
@@ -61,6 +67,7 @@ final class NavigationController
 
         return new WP_REST_Response([
             'schemaVersion' => '1.0',
+            'locale' => $locale,
             'location' => $location,
             'items' => $this->tree($items),
         ], 200);

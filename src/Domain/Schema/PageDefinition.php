@@ -15,6 +15,7 @@ final readonly class PageDefinition
         public string $title,
         public PageStatus $status,
         public array $blocks,
+        public ?SeoMetadata $seo = null,
     ) {
     }
 }
