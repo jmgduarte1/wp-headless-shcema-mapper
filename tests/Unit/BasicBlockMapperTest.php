@@ -266,6 +266,34 @@ final class BasicBlockMapperTest extends TestCase
         ]);
         self::assertSame('Experience', $item->data->text);
         self::assertSame('Experience', $item->data->html);
+
+        $styledItem = $mapper->map([
+            'blockName' => 'core/list-item',
+            'attrs' => [
+                'style' => [
+                    'color' => ['text' => '#123456'],
+                    'typography' => ['fontWeight' => '700'],
+                ],
+            ],
+            'innerHTML' => '<li>Styled experience</li>',
+        ]);
+        self::assertSame('#123456', $styledItem->style?->properties['color']);
+        self::assertSame('700', $styledItem->style?->properties['fontWeight']);
+
+        $customCssList = $mapper->map([
+            'blockName' => 'core/list',
+            'attrs' => [
+                'style' => [
+                    'css' => ".highlights {\n display: flex;\n flex-direction: column;\n justify-content: center;\n }",
+                ],
+            ],
+            'innerBlocks' => [
+                ['blockName' => 'core/list-item', 'innerHTML' => '<li>One</li>'],
+            ],
+        ]);
+        self::assertSame('flex', $customCssList->style?->properties['display']);
+        self::assertSame('column', $customCssList->style?->properties['flexDirection']);
+        self::assertSame('center', $customCssList->style?->properties['justifyContent']);
     }
 
     public function testMapsResponsiveGridColumns(): void

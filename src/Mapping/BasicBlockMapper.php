@@ -159,6 +159,7 @@ final class BasicBlockMapper implements BlockMapper
      */
     private function mapListItem(array $block, int $index = 0): PageBlock
     {
+        $attrs = $this->attrs($block);
         $text = $this->blockText($block);
 
         if ($text === null) {
@@ -173,6 +174,7 @@ final class BasicBlockMapper implements BlockMapper
                 html: $this->blockHtml($block, 'li'),
                 layout: 'list-item',
             ),
+            style: $this->styleFromAttrs($attrs, 'list-item'),
             element: 'li',
         );
     }
@@ -747,6 +749,11 @@ final class BasicBlockMapper implements BlockMapper
         }
 
         $allowed = [
+            'display' => 'display',
+            'flex-direction' => 'flexDirection',
+            'flex-wrap' => 'flexWrap',
+            'justify-content' => 'justifyContent',
+            'align-items' => 'alignItems',
             'border-radius' => 'borderRadius',
             'outline' => 'outline',
             'outline-offset' => 'outlineOffset',
