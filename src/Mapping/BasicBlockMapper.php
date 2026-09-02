@@ -615,7 +615,48 @@ final class BasicBlockMapper implements BlockMapper
             $properties['alignSelf'] = $this->flexAlignment($verticalAlignment) ?? $verticalAlignment;
         }
 
+        foreach ($this->customCssProperties($attrs['style']['css'] ?? null) as $property => $value) {
+            if (!isset($properties[$property])) {
+                $properties[$property] = $value;
+            }
+        }
+
         return $properties !== [] ? new BlockStyle(properties: $properties) : null;
+    }
+
+    /**
+     * Extract the portable, safe subset of Gutenberg's custom CSS attribute.
+     *
+     * @return array<string, string|int|float>
+     */
+    private function customCssProperties(mixed $css): array
+    {
+        if (!is_string($css)) {
+            return [];
+        }
+
+        $allowed = [
+            'border-radius' => 'borderRadius',
+            'outline' => 'outline',
+            'outline-offset' => 'outlineOffset',
+            'position' => 'position',
+        ];
+        $properties = [];
+
+        preg_match_all('/([a-z-]+)\s*:\s*([^;{}]+)/i', $css, $matches, PREG_SET_ORDER);
+
+        foreach ($matches as $match) {
+            $cssProperty = strtolower(trim($match[1]));
+            $value = trim($match[2]);
+
+            if (!isset($allowed[$cssProperty]) || $value === '' || preg_match('/url\s*\(|expression\s*\(|[<>;]/i', $value)) {
+                continue;
+            }
+
+            $properties[$allowed[$cssProperty]] = $this->normalizeWordPressStyleValue($value);
+        }
+
+        return $properties;
     }
 
     /**

@@ -198,6 +198,21 @@ final class BasicBlockMapperTest extends TestCase
         self::assertSame('#395b60', $outlineButton->style?->properties['borderColor']);
         self::assertSame('1px', $outlineButton->style?->properties['borderWidth']);
         self::assertSame('solid', $outlineButton->style?->properties['borderStyle']);
+
+        $image = $mapper->map([
+            'blockName' => 'core/image',
+            'attrs' => [
+                'url' => 'https://example.com/portrait.webp',
+                'style' => [
+                    'css' => ".hero__portrait-frame {\n    border-radius: 0.85rem;\n    outline: 2px solid #006c7a;\n    outline-offset: 8px;\n    position: relative;\n}",
+                ],
+            ],
+        ]);
+
+        self::assertSame('0.85rem', $image->style?->properties['borderRadius']);
+        self::assertSame('2px solid #006c7a', $image->style?->properties['outline']);
+        self::assertSame('8px', $image->style?->properties['outlineOffset']);
+        self::assertSame('relative', $image->style?->properties['position']);
     }
 
     public function testKeepsImageDimensionsAsAttributesWithoutCreatingCssWidth(): void
