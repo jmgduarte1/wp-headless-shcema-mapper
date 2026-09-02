@@ -78,13 +78,13 @@ final class BasicBlockMapperTest extends TestCase
         // Child 1
         $col1 = $block->children[0];
         self::assertSame('column', $col1->data->layout);
-        self::assertSame('33.33%', $col1->style?->properties['width']);
+        self::assertSame(['mobile' => '100%', 'tablet' => '100%', 'desktop' => '33.33%'], $col1->style?->properties['width']);
         self::assertSame('flex-start', $col1->style?->properties['alignSelf']);
 
         // Child 2
         $col2 = $block->children[1];
         self::assertSame('column', $col2->data->layout);
-        self::assertSame('33.33%', $col2->style?->properties['width']);
+        self::assertSame(['mobile' => '100%', 'tablet' => '100%', 'desktop' => '33.33%'], $col2->style?->properties['width']);
 
         // Child 3
         $col3 = $block->children[2];
@@ -266,5 +266,80 @@ final class BasicBlockMapperTest extends TestCase
         ]);
         self::assertSame('Experience', $item->data->text);
         self::assertSame('Experience', $item->data->html);
+    }
+
+    public function testMapsResponsiveGridColumns(): void
+    {
+        $grid = (new BasicBlockMapper())->map([
+            'blockName' => 'core/group',
+            'attrs' => [
+                'layout' => ['type' => 'grid', 'columnCount' => 2],
+                'style' => [
+                    '@mobile' => ['layout' => ['columnCount' => 1]],
+                ],
+            ],
+            'innerBlocks' => [
+                ['blockName' => 'core/paragraph', 'attrs' => ['content' => 'One']],
+                ['blockName' => 'core/paragraph', 'attrs' => ['content' => 'Two']],
+            ],
+        ]);
+
+        self::assertSame([
+            'mobile' => 'repeat(1, minmax(0, 1fr))',
+            'tablet' => 'repeat(1, minmax(0, 1fr))',
+            'desktop' => 'repeat(2, minmax(0, 1fr))',
+        ], $grid->style?->properties['gridTemplateColumns']);
+    }
+
+    public function testPreservesResponsiveTypographyAndSpacing(): void
+    {
+        $block = (new BasicBlockMapper())->map([
+            'blockName' => 'core/paragraph',
+            'attrs' => [
+                'content' => 'Responsive paragraph',
+                'style' => [
+                    'typography' => [
+                        'fontSize' => [
+                            'mobile' => '1rem',
+                            'tablet' => '1.25rem',
+                            'desktop' => '1.5rem',
+                        ],
+                    ],
+                    'spacing' => [
+                        'padding' => [
+                            'mobile' => '8px 12px',
+                            'tablet' => '16px 20px',
+                            'desktop' => '24px 32px',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        self::assertSame([
+            'mobile' => '1rem',
+            'tablet' => '1.25rem',
+            'desktop' => '1.5rem',
+        ], $block->style?->properties['fontSize']);
+        self::assertSame([
+            'mobile' => '8px 12px',
+            'tablet' => '16px 20px',
+            'desktop' => '24px 32px',
+        ], $block->style?->properties['padding']);
+    }
+
+    public function testMapsImageAspectRatioAndScale(): void
+    {
+        $image = (new BasicBlockMapper())->map([
+            'blockName' => 'core/image',
+            'attrs' => [
+                'url' => 'https://example.com/portrait.webp',
+                'aspectRatio' => '1',
+                'scale' => 'cover',
+            ],
+        ]);
+
+        self::assertSame('1', $image->style?->properties['aspectRatio']);
+        self::assertSame('cover', $image->style?->properties['objectFit']);
     }
 }

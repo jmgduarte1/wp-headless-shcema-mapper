@@ -91,10 +91,17 @@ final class BasicBlockMapper implements BlockMapper
             $columnCount = isset($layoutAttrs['columnCount']) && is_int($layoutAttrs['columnCount'])
                 ? $layoutAttrs['columnCount']
                 : count($this->listOfBlocks($block['innerBlocks'] ?? []));
+            $mobileColumnCount = $this->nestedInt($attrs, ['style', '@mobile', 'layout', 'columnCount']);
+            $tabletColumnCount = $this->nestedInt($attrs, ['style', '@tablet', 'layout', 'columnCount']);
 
             if ($columnCount > 0) {
                 $properties = $style !== null ? $style->properties : [];
-                $properties['gridTemplateColumns'] = sprintf('repeat(%d, minmax(0, 1fr))', $columnCount);
+                $desktopColumns = sprintf('repeat(%d, minmax(0, 1fr))', $columnCount);
+                $mobileColumns = sprintf('repeat(%d, minmax(0, 1fr))', $mobileColumnCount ?? $columnCount);
+                $tabletColumns = sprintf('repeat(%d, minmax(0, 1fr))', $tabletColumnCount ?? $mobileColumnCount ?? $columnCount);
+                $properties['gridTemplateColumns'] = $mobileColumnCount !== null || $tabletColumnCount !== null
+                    ? ['mobile' => $mobileColumns, 'tablet' => $tabletColumns, 'desktop' => $desktopColumns]
+                    : $desktopColumns;
                 $style = new BlockStyle($style !== null ? $style->variant : null, $properties);
             }
         }
@@ -310,6 +317,19 @@ final class BasicBlockMapper implements BlockMapper
             }
         }
 
+        $style = $this->styleFromAttrs($attrs);
+        $properties = $style !== null ? $style->properties : [];
+        $aspectRatio = $this->optionalString($attrs, 'aspectRatio');
+        $scale = $this->optionalString($attrs, 'scale');
+
+        if ($aspectRatio !== null) {
+            $properties['aspectRatio'] = $aspectRatio;
+        }
+
+        if ($scale !== null && in_array($scale, ['cover', 'contain'], true)) {
+            $properties['objectFit'] = $scale;
+        }
+
         return new PageBlock(
             id: $this->blockId($block, 'image', $index),
             type: BlockType::IMAGE,
@@ -322,7 +342,7 @@ final class BasicBlockMapper implements BlockMapper
                 alt: $this->optionalString($attrs, 'alt') ?? $this->htmlAttribute($block, 'img', 'alt') ?? '',
                 attributes: $attributes,
             ),
-            style: $this->styleFromAttrs($attrs),
+            style: $properties !== [] ? new BlockStyle($style?->variant, $properties) : null,
             element: 'img',
         );
     }
@@ -558,94 +578,102 @@ final class BasicBlockMapper implements BlockMapper
         // are intrinsic dimensions and must remain HTML attributes, not CSS.
         if ($layout === 'column' && isset($attrs['width'])) {
             if (is_string($attrs['width']) && trim($attrs['width']) !== '') {
-                $properties['width'] = trim($attrs['width']);
+                $properties['width'] = [
+                    'mobile' => '100%',
+                    'tablet' => '100%',
+                    'desktop' => trim($attrs['width']),
+                ];
             } elseif (is_int($attrs['width']) || is_float($attrs['width'])) {
-                $properties['width'] = $attrs['width'] . '%';
+                $properties['width'] = [
+                    'mobile' => '100%',
+                    'tablet' => '100%',
+                    'desktop' => $attrs['width'] . '%',
+                ];
             }
         }
 
-        $dimensionWidth = $this->nestedString($attrs, ['style', 'dimensions', 'width']);
+        $dimensionWidth = $this->nestedResponsiveValue($attrs, ['style', 'dimensions', 'width']);
 
         if ($dimensionWidth !== null) {
-            $properties['width'] = $this->normalizeWordPressStyleValue($dimensionWidth);
+            $properties['width'] = $dimensionWidth;
         }
 
-        $dimensionHeight = $this->nestedString($attrs, ['style', 'dimensions', 'height']);
+        $dimensionHeight = $this->nestedResponsiveValue($attrs, ['style', 'dimensions', 'height']);
 
         if ($dimensionHeight !== null) {
-            $properties['height'] = $this->normalizeWordPressStyleValue($dimensionHeight);
+            $properties['height'] = $dimensionHeight;
         }
 
-        $minHeight = $this->nestedString($attrs, ['style', 'dimensions', 'minHeight']);
+        $minHeight = $this->nestedResponsiveValue($attrs, ['style', 'dimensions', 'minHeight']);
 
         if ($minHeight !== null) {
-            $properties['minHeight'] = $this->normalizeWordPressStyleValue($minHeight);
+            $properties['minHeight'] = $minHeight;
         }
 
-        $background = $this->nestedString($attrs, ['style', 'color', 'gradient']);
-        $backgroundColor = $this->nestedString($attrs, ['style', 'color', 'background']);
+        $background = $this->nestedResponsiveValue($attrs, ['style', 'color', 'gradient']);
+        $backgroundColor = $this->nestedResponsiveValue($attrs, ['style', 'color', 'background']);
         $presetGradient = $this->optionalString($attrs, 'gradient');
         $presetBackgroundColor = $this->optionalString($attrs, 'backgroundColor');
-        $textColor = $this->nestedString($attrs, ['style', 'color', 'text']);
+        $textColor = $this->nestedResponsiveValue($attrs, ['style', 'color', 'text']);
         $presetTextColor = $this->optionalString($attrs, 'textColor');
 
         if ($background !== null) {
-            $properties['background'] = $this->normalizeWordPressStyleValue($background);
+            $properties['background'] = $background;
         } elseif ($presetGradient !== null) {
             $properties['background'] = $this->presetStyleValue('gradient', $presetGradient);
         } elseif ($backgroundColor !== null) {
-            $properties['backgroundColor'] = $this->normalizeWordPressStyleValue($backgroundColor);
+            $properties['backgroundColor'] = $backgroundColor;
         } elseif ($presetBackgroundColor !== null) {
             $properties['backgroundColor'] = $this->presetStyleValue('color', $presetBackgroundColor);
         }
 
         if ($textColor !== null) {
-            $properties['color'] = $this->normalizeWordPressStyleValue($textColor);
+            $properties['color'] = $textColor;
         } elseif ($presetTextColor !== null) {
             $properties['color'] = $this->presetStyleValue('color', $presetTextColor);
         }
 
         // Typography
-        $fontSize = $this->nestedString($attrs, ['style', 'typography', 'fontSize']);
+        $fontSize = $this->nestedResponsiveValue($attrs, ['style', 'typography', 'fontSize']);
         $presetFontSize = $this->optionalString($attrs, 'fontSize');
-        $fontFamily = $this->nestedString($attrs, ['style', 'typography', 'fontFamily']);
+        $fontFamily = $this->nestedResponsiveValue($attrs, ['style', 'typography', 'fontFamily']);
         $presetFontFamily = $this->optionalString($attrs, 'fontFamily');
-        $fontWeight = $this->nestedString($attrs, ['style', 'typography', 'fontWeight']) ?? $this->optionalString($attrs, 'fontWeight');
-        $letterSpacing = $this->nestedString($attrs, ['style', 'typography', 'letterSpacing']) ?? $this->optionalString($attrs, 'letterSpacing');
-        $textTransform = $this->nestedString($attrs, ['style', 'typography', 'textTransform']) ?? $this->optionalString($attrs, 'textTransform');
-        $lineHeight = $this->nestedString($attrs, ['style', 'typography', 'lineHeight']) ?? $this->optionalString($attrs, 'lineHeight');
-        $fontStyle = $this->nestedString($attrs, ['style', 'typography', 'fontStyle']) ?? $this->optionalString($attrs, 'fontStyle');
-        $textDecoration = $this->nestedString($attrs, ['style', 'typography', 'textDecoration']) ?? $this->optionalString($attrs, 'textDecoration');
+        $fontWeight = $this->nestedResponsiveValue($attrs, ['style', 'typography', 'fontWeight']) ?? $this->optionalString($attrs, 'fontWeight');
+        $letterSpacing = $this->nestedResponsiveValue($attrs, ['style', 'typography', 'letterSpacing']) ?? $this->optionalString($attrs, 'letterSpacing');
+        $textTransform = $this->nestedResponsiveValue($attrs, ['style', 'typography', 'textTransform']) ?? $this->optionalString($attrs, 'textTransform');
+        $lineHeight = $this->nestedResponsiveValue($attrs, ['style', 'typography', 'lineHeight']) ?? $this->optionalString($attrs, 'lineHeight');
+        $fontStyle = $this->nestedResponsiveValue($attrs, ['style', 'typography', 'fontStyle']) ?? $this->optionalString($attrs, 'fontStyle');
+        $textDecoration = $this->nestedResponsiveValue($attrs, ['style', 'typography', 'textDecoration']) ?? $this->optionalString($attrs, 'textDecoration');
 
         if ($fontSize !== null) {
-            $properties['fontSize'] = $this->normalizeWordPressStyleValue($fontSize);
+            $properties['fontSize'] = $fontSize;
         } elseif ($presetFontSize !== null) {
             $properties['fontSize'] = $this->presetStyleValue('font-size', $presetFontSize);
         }
 
         if ($fontFamily !== null) {
-            $properties['fontFamily'] = $this->normalizeWordPressStyleValue($fontFamily);
+            $properties['fontFamily'] = $fontFamily;
         } elseif ($presetFontFamily !== null) {
             $properties['fontFamily'] = $this->presetStyleValue('font-family', $presetFontFamily);
         }
 
         if ($fontWeight !== null) {
-            $properties['fontWeight'] = $this->normalizeWordPressStyleValue($fontWeight);
+            $properties['fontWeight'] = $this->normalizeResponsiveStyleValue($fontWeight);
         }
         if ($letterSpacing !== null) {
-            $properties['letterSpacing'] = $this->normalizeWordPressStyleValue($letterSpacing);
+            $properties['letterSpacing'] = $this->normalizeResponsiveStyleValue($letterSpacing);
         }
         if ($textTransform !== null) {
-            $properties['textTransform'] = $this->normalizeWordPressStyleValue($textTransform);
+            $properties['textTransform'] = $this->normalizeResponsiveStyleValue($textTransform);
         }
         if ($lineHeight !== null) {
-            $properties['lineHeight'] = $this->normalizeWordPressStyleValue($lineHeight);
+            $properties['lineHeight'] = $this->normalizeResponsiveStyleValue($lineHeight);
         }
         if ($fontStyle !== null) {
-            $properties['fontStyle'] = $this->normalizeWordPressStyleValue($fontStyle);
+            $properties['fontStyle'] = $this->normalizeResponsiveStyleValue($fontStyle);
         }
         if ($textDecoration !== null) {
-            $properties['textDecoration'] = $this->normalizeWordPressStyleValue($textDecoration);
+            $properties['textDecoration'] = $this->normalizeResponsiveStyleValue($textDecoration);
         }
 
         // Borders
@@ -947,6 +975,24 @@ final class BasicBlockMapper implements BlockMapper
         return is_string($current) ? $current : null;
     }
 
+    /**
+     * @param array<string, mixed> $values
+     * @param list<string> $path
+     */
+    private function nestedInt(array $values, array $path): ?int
+    {
+        $current = $values;
+
+        foreach ($path as $segment) {
+            if (!is_array($current) || !array_key_exists($segment, $current)) {
+                return null;
+            }
+            $current = $current[$segment];
+        }
+
+        return is_int($current) ? $current : null;
+    }
+
     private function normalizeWordPressStyleValue(string|int|float $value): string|int|float
     {
         if (!is_string($value)) {
@@ -958,6 +1004,60 @@ final class BasicBlockMapper implements BlockMapper
         }
 
         return $value;
+    }
+
+    /**
+     * @param string|int|float|array<string, string|int|float> $value
+     * @return string|int|float|array<string, string|int|float>
+     */
+    private function normalizeResponsiveStyleValue(string|int|float|array $value): string|int|float|array
+    {
+        if (!is_array($value)) {
+            return $this->normalizeWordPressStyleValue($value);
+        }
+
+        $normalized = [];
+        foreach ($value as $key => $entry) {
+            if (is_string($key) && (is_string($entry) || is_int($entry) || is_float($entry))) {
+                $normalized[$key] = $this->normalizeWordPressStyleValue($entry);
+            }
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @param array<string, mixed> $values
+     * @param list<string> $path
+     * @return string|int|float|array<string, string|int|float>|null
+     */
+    private function nestedResponsiveValue(array $values, array $path): string|int|float|array|null
+    {
+        $current = $values;
+
+        foreach ($path as $segment) {
+            if (!is_array($current) || !array_key_exists($segment, $current)) {
+                return null;
+            }
+            $current = $current[$segment];
+        }
+
+        if (is_string($current) || is_int($current) || is_float($current)) {
+            return $this->normalizeWordPressStyleValue($current);
+        }
+
+        if (!is_array($current)) {
+            return null;
+        }
+
+        $result = [];
+        foreach ($current as $key => $value) {
+            if (is_string($key) && (is_string($value) || is_int($value) || is_float($value))) {
+                $result[$key] = $this->normalizeWordPressStyleValue($value);
+            }
+        }
+
+        return $result !== [] ? $result : null;
     }
 
     private function presetStyleValue(string $preset, string $slug): string
