@@ -87,6 +87,25 @@ Deliver the complete end-to-end walking skeleton for WordPress-authored Hero con
 ### Next
 - Add WordPress integration tests for plugin activation, REST route output, unknown slug 404, and draft boundary 404.
 
+## M2 Implementation Status
+
+M2 extends the plugin with the native block composition contract:
+
+- Native groups, columns, text, images, buttons, spacers, and disclosure blocks are normalized recursively.
+- Text blocks expose sanitized inline HTML in `BasicBlockData::html` while retaining plain text.
+- Core buttons are normalized as safe link blocks with button layout metadata.
+- Child order, column counts, widths, alignment, and supported WordPress styles are preserved.
+- Mapper coverage verifies rich text and button normalization.
+
+The remaining M2 follow-up is live WordPress integration coverage.
+
+## M3 and M4 Implementation Status
+
+- M3 style normalization now covers WordPress spacing, typography, colors/gradients, dimensions, borders, alignment, and controlled responsive values.
+- M4 exposes normalized media metadata (`srcSet`, loading mode, MIME type, and caption) and a public nested navigation endpoint.
+- M4 supports internal, external, anchor, email, and telephone menu links.
+- The plugin quality suite passes with PHP 8.2.33.
+
 ## 2026-08-28 — WordPress Editor Compatibility Adjustment
 
 ### Completed

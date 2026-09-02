@@ -376,7 +376,31 @@ M1 is accepted when:
 
 ---
 
-# 13. Source Documents
+# 13. M2 Composition Contract
+
+M2 extends the M1 native block contract with recursive composition. Structural blocks may contain `children`, and the consumer must preserve their order.
+
+The M2 action shape is deliberately simple:
+
+```json
+{
+  "type": "link",
+  "element": "a",
+  "data": {
+    "text": "Contact us",
+    "href": "/contact",
+    "layout": "button"
+  }
+}
+```
+
+Text may include a sanitized `html` value for approved inline elements, with `text` retained as a plain-text fallback. Angular must never treat CMS HTML as trusted executable content.
+
+M2 acceptance requires nested sections/columns, images, rich text, links, and buttons to render in SPA and SSR contexts while preserving safe styles and accessibility metadata.
+
+---
+
+# 14. Source Documents
 
 The shared contract requirements are derived from:
 

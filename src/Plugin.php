@@ -41,5 +41,6 @@ final class Plugin
     public function registerRestRoutes(): void
     {
         (new Rest\PageController())->registerRoutes();
+        (new Rest\NavigationController())->registerRoutes();
     }
 }

@@ -145,6 +145,7 @@ final class BasicBlockMapper implements BlockMapper
             type: BlockType::TEXT,
             data: new BasicBlockData(
                 text: $text,
+                html: $this->blockHtml($block, $element),
                 attributes: $this->attributes($attrs, ['level', 'fontSize', 'align', 'className']),
             ),
             style: $this->styleFromAttrs($attrs),
@@ -161,8 +162,8 @@ final class BasicBlockMapper implements BlockMapper
         $text = $this->optionalString($attrs, 'text') ?? $this->blockText($block);
         $href = $this->optionalString($attrs, 'url');
 
-        if ($text === null || $href === null) {
-            throw new InvalidArgumentException('Button block requires text and URL.');
+        if ($text === null) {
+            throw new InvalidArgumentException('Button block requires text.');
         }
 
         return new PageBlock(
@@ -170,15 +171,41 @@ final class BasicBlockMapper implements BlockMapper
             type: BlockType::LINK,
             data: new BasicBlockData(
                 text: $text,
-                href: $this->safeHref($href),
+                href: $href !== null ? $this->safeHref($href) : null,
                 target: $this->optionalString($attrs, 'linkTarget'),
                 rel: $this->optionalString($attrs, 'rel'),
                 layout: 'button',
                 attributes: $this->attributes($attrs, ['className']),
             ),
-            style: $this->styleFromAttrs($attrs),
-            element: 'a',
+            style: $this->buttonStyle($attrs),
+            element: $href !== null ? 'a' : 'button',
         );
+    }
+
+    /**
+     * Convert WordPress button style variations into portable schema properties.
+     *
+     * @param array<string, mixed> $attrs
+     */
+    private function buttonStyle(array $attrs): ?BlockStyle
+    {
+        $style = $this->styleFromAttrs($attrs);
+        $className = $this->optionalString($attrs, 'className') ?? '';
+
+        if (!str_contains($className, 'is-style-outline')) {
+            return $style;
+        }
+
+        $properties = $style !== null ? $style->properties : [];
+        $properties['backgroundColor'] = 'transparent';
+        $properties['borderWidth'] = '1px';
+        $properties['borderStyle'] = 'solid';
+
+        if (!isset($properties['borderColor']) && isset($properties['color']) && is_string($properties['color'])) {
+            $properties['borderColor'] = $properties['color'];
+        }
+
+        return new BlockStyle($style?->variant, $properties);
     }
 
     /**
@@ -210,6 +237,10 @@ final class BasicBlockMapper implements BlockMapper
             type: BlockType::IMAGE,
             data: new BasicBlockData(
                 src: $this->safeUrl($src),
+                srcSet: $this->optionalString($attrs, 'srcSet') ?? $this->htmlAttribute($block, 'img', 'srcset'),
+                loading: $this->safeLoading($this->optionalString($attrs, 'loading') ?? $this->htmlAttribute($block, 'img', 'loading')),
+                mimeType: $this->optionalString($attrs, 'mimeType'),
+                caption: $this->optionalString($attrs, 'caption'),
                 alt: $this->optionalString($attrs, 'alt') ?? $this->htmlAttribute($block, 'img', 'alt') ?? '',
                 attributes: $attributes,
             ),
@@ -445,7 +476,9 @@ final class BasicBlockMapper implements BlockMapper
             }
         }
 
-        if (isset($attrs['width'])) {
+        // Gutenberg column widths are percentages. Image width/height attributes
+        // are intrinsic dimensions and must remain HTML attributes, not CSS.
+        if ($layout === 'column' && isset($attrs['width'])) {
             if (is_string($attrs['width']) && trim($attrs['width']) !== '') {
                 $properties['width'] = trim($attrs['width']);
             } elseif (is_int($attrs['width']) || is_float($attrs['width'])) {
@@ -495,7 +528,8 @@ final class BasicBlockMapper implements BlockMapper
         }
 
         // Typography
-        $fontSize = $this->nestedString($attrs, ['style', 'typography', 'fontSize']) ?? $this->optionalString($attrs, 'fontSize');
+        $fontSize = $this->nestedString($attrs, ['style', 'typography', 'fontSize']);
+        $presetFontSize = $this->optionalString($attrs, 'fontSize');
         $fontFamily = $this->nestedString($attrs, ['style', 'typography', 'fontFamily']);
         $presetFontFamily = $this->optionalString($attrs, 'fontFamily');
         $fontWeight = $this->nestedString($attrs, ['style', 'typography', 'fontWeight']) ?? $this->optionalString($attrs, 'fontWeight');
@@ -561,16 +595,13 @@ final class BasicBlockMapper implements BlockMapper
 
         if ($borderStyle !== null) {
             $properties['borderStyle'] = $this->normalizeWordPressStyleValue($borderStyle);
-        } elseif (($borderColor !== null || $presetBorderColor !== null || $borderWidth !== null) && !isset($properties['borderStyle'])) {
+        } elseif ($borderColor !== null || $presetBorderColor !== null || $borderWidth !== null) {
             $properties['borderStyle'] = 'solid';
         }
 
         $verticalAlignment = $this->optionalString($attrs, 'verticalAlignment');
 
         if ($layout === 'columns') {
-            if ($verticalAlignment !== null) {
-                $properties['alignItems'] = $this->flexAlignment($verticalAlignment) ?? $verticalAlignment;
-            }
             if (!isset($properties['gap'])) {
                 $properties['gap'] = 'var(--wp--preset--spacing--50)';
             }
@@ -668,6 +699,43 @@ final class BasicBlockMapper implements BlockMapper
     }
 
     /**
+     * Return a small, safe inline HTML subset for headings and paragraphs.
+     *
+     * @param array<string, mixed> $block
+     */
+    private function blockHtml(array $block, string $element): ?string
+    {
+        if (!isset($block['innerHTML']) || !is_string($block['innerHTML'])) {
+            return null;
+        }
+
+        $html = trim($block['innerHTML']);
+        $pattern = '/^<' . preg_quote($element, '/') . '\\b[^>]*>(.*?)<\\/' . preg_quote($element, '/') . '>$/is';
+
+        if (preg_match($pattern, $html, $matches)) {
+            $html = trim($matches[1]);
+        }
+
+        if (function_exists('wp_kses')) {
+            $html = wp_kses($html, [
+                'a' => ['href' => true, 'target' => true, 'rel' => true],
+                'br' => [],
+                'code' => [],
+                'em' => [],
+                'i' => [],
+                'mark' => [],
+                's' => [],
+                'strong' => [],
+                'u' => [],
+            ]);
+        } else {
+            $html = strip_tags($html, '<a><br><code><em><i><mark><s><strong><u>');
+        }
+
+        return trim($html) !== '' ? trim($html) : null;
+    }
+
+    /**
      * @param array<string, mixed> $block
      */
     private function blockId(array $block, string $fallback, int $index = 0): string
@@ -707,9 +775,18 @@ final class BasicBlockMapper implements BlockMapper
         return isset($values[$key]) && is_bool($values[$key]) ? $values[$key] : null;
     }
 
+    private function safeLoading(?string $loading): ?string
+    {
+        return $loading !== null && in_array($loading, ['lazy', 'eager'], true) ? $loading : null;
+    }
+
     private function safeHref(string $href): string
     {
         if (str_starts_with($href, '#') || (str_starts_with($href, '/') && !str_starts_with($href, '//'))) {
+            return $href;
+        }
+
+        if (preg_match('/^(mailto|tel):[^\\s]+$/i', $href)) {
             return $href;
         }
 

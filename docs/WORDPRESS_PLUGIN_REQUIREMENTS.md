@@ -518,6 +518,12 @@ Rules:
 
 # 19. Deferred WordPress Requirements
 
+## M2 Native Composition Requirements
+
+M2 adds recursive native block composition. The plugin must preserve structural children, approved inline text markup, image metadata, and button intent. A `core/button` is serialized as a normalized `link` block with `layout: "button"`; it is not serialized as a Gutenberg-specific block name.
+
+The plugin must validate button URLs using the same link security policy as other links and must not emit executable HTML or event handlers.
+
 Not part of M1:
 
 ```text

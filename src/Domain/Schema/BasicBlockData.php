@@ -11,7 +11,12 @@ final readonly class BasicBlockData
      */
     public function __construct(
         public ?string $text = null,
+        public ?string $html = null,
         public ?string $src = null,
+        public ?string $srcSet = null,
+        public ?string $loading = null,
+        public ?string $mimeType = null,
+        public ?string $caption = null,
         public ?string $alt = null,
         public ?string $href = null,
         public ?string $target = null,

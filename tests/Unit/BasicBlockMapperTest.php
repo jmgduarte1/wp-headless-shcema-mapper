@@ -43,6 +43,7 @@ final class BasicBlockMapperTest extends TestCase
                     'blockName' => 'core/column',
                     'attrs' => [
                         'width' => 33.33,
+                        'verticalAlignment' => 'center',
                     ],
                     'innerBlocks' => [
                         [
@@ -71,7 +72,7 @@ final class BasicBlockMapperTest extends TestCase
         self::assertSame(3, $block->data->attributes['columns']);
         self::assertFalse($block->data->attributes['isStackedOnMobile']);
         self::assertSame('var(--wp--preset--spacing--50)', $block->style?->properties['gap']);
-        self::assertSame('center', $block->style?->properties['alignItems']);
+        self::assertArrayNotHasKey('alignItems', $block->style?->properties ?? []);
         self::assertCount(3, $block->children);
 
         // Child 1
@@ -89,6 +90,8 @@ final class BasicBlockMapperTest extends TestCase
         $col3 = $block->children[2];
         self::assertSame('column', $col3->data->layout);
         self::assertArrayNotHasKey('width', $col3->style?->properties ?? []);
+
+        self::assertSame('center', $col2->style?->properties['alignSelf']);
     }
 
     public function testMapsTypographyAndBorderStyles(): void
@@ -142,5 +145,76 @@ final class BasicBlockMapperTest extends TestCase
             'left' => '24px',
             'right' => '24px',
         ], $block->style->properties['padding']);
+    }
+
+    public function testMapsRichTextAndButtons(): void
+    {
+        $mapper = new BasicBlockMapper();
+
+        $paragraph = $mapper->map([
+            'blockName' => 'core/paragraph',
+            'attrs' => [],
+            'innerHTML' => '<p><strong>Important</strong> text</p>',
+        ]);
+        $button = $mapper->map([
+            'blockName' => 'core/button',
+            'attrs' => [
+                'url' => '/contact',
+                'className' => 'wp-element-button',
+            ],
+            'innerHTML' => '<a class="wp-element-button" href="/contact">Contact us</a>',
+        ]);
+
+        self::assertSame('<strong>Important</strong> text', $paragraph->data->html);
+        self::assertSame('Contact us', $button->data->text);
+        self::assertSame('/contact', $button->data->href);
+        self::assertSame('button', $button->data->layout);
+        self::assertSame('a', $button->element);
+
+        $visualButton = $mapper->map([
+            'blockName' => 'core/button',
+            'attrs' => [],
+            'innerHTML' => '<a class="wp-element-button">View Projects</a>',
+        ]);
+
+        self::assertSame('View Projects', $visualButton->data->text);
+        self::assertNull($visualButton->data->href);
+        self::assertSame('button', $visualButton->element);
+
+        $outlineButton = $mapper->map([
+            'blockName' => 'core/button',
+            'attrs' => [
+                'className' => 'is-style-outline',
+                'style' => [
+                    'color' => [
+                        'text' => '#395b60',
+                    ],
+                ],
+            ],
+            'innerHTML' => '<a class="wp-element-button">View Projects</a>',
+        ]);
+
+        self::assertSame('transparent', $outlineButton->style?->properties['backgroundColor']);
+        self::assertSame('#395b60', $outlineButton->style?->properties['borderColor']);
+        self::assertSame('1px', $outlineButton->style?->properties['borderWidth']);
+        self::assertSame('solid', $outlineButton->style?->properties['borderStyle']);
+    }
+
+    public function testKeepsImageDimensionsAsAttributesWithoutCreatingCssWidth(): void
+    {
+        $mapper = new BasicBlockMapper();
+        $image = $mapper->map([
+            'blockName' => 'core/image',
+            'attrs' => [
+                'url' => 'https://example.com/image.webp',
+                'alt' => 'Example image',
+                'width' => 400,
+                'height' => 400,
+            ],
+        ]);
+
+        self::assertSame(400, $image->data->attributes['width']);
+        self::assertSame(400, $image->data->attributes['height']);
+        self::assertArrayNotHasKey('width', $image->style?->properties ?? []);
     }
 }
