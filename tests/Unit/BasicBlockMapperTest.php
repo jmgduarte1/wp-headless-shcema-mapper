@@ -232,4 +232,39 @@ final class BasicBlockMapperTest extends TestCase
         self::assertSame(400, $image->data->attributes['height']);
         self::assertArrayNotHasKey('width', $image->style?->properties ?? []);
     }
+
+    public function testMapsSeparatorAndGridGroup(): void
+    {
+        $mapper = new BasicBlockMapper();
+
+        $separator = $mapper->map([
+            'blockName' => 'core/separator',
+            'attrs' => ['backgroundColor' => 'base'],
+        ]);
+        self::assertSame(BlockType::SEPARATOR, $separator->type);
+        self::assertSame('hr', $separator->element);
+        self::assertSame('0px solid var(--wp--preset--color--base)', $separator->style?->properties['borderTop']);
+        self::assertSame('1px solid var(--wp--preset--color--base)', $separator->style?->properties['borderBottom']);
+
+        $grid = $mapper->map([
+            'blockName' => 'core/group',
+            'attrs' => ['layout' => ['type' => 'grid']],
+            'innerBlocks' => [
+                ['blockName' => 'core/paragraph', 'attrs' => ['content' => 'One']],
+                ['blockName' => 'core/paragraph', 'attrs' => ['content' => 'Two']],
+            ],
+        ]);
+
+        self::assertSame('grid', $grid->data->layout);
+        self::assertSame('grid', $grid->style?->properties['display']);
+        self::assertSame('repeat(2, minmax(0, 1fr))', $grid->style?->properties['gridTemplateColumns']);
+        self::assertCount(2, $grid->children);
+
+        $item = $mapper->map([
+            'blockName' => 'core/list-item',
+            'innerHTML' => '<li>Experience</li>',
+        ]);
+        self::assertSame('Experience', $item->data->text);
+        self::assertSame('Experience', $item->data->html);
+    }
 }

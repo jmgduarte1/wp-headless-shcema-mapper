@@ -13,6 +13,7 @@ final class BlockType
     public const LINK = 'link';
     public const SPACER = 'spacer';
     public const DETAILS = 'details';
+    public const SEPARATOR = 'separator';
 
     private function __construct()
     {

@@ -23,6 +23,9 @@ final class BasicBlockMapper implements BlockMapper
         'core/button',
         'core/image',
         'core/spacer',
+        'core/separator',
+        'core/list',
+        'core/list-item',
         'core/details',
         'core/accordion',
         'core/accordion-item',
@@ -43,7 +46,7 @@ final class BasicBlockMapper implements BlockMapper
     public function map(array $block, int $index = 0): PageBlock
     {
         return match ($block['blockName'] ?? null) {
-            'core/group' => $this->mapContainer($block, 'section', 'group', $index),
+            'core/group' => $this->mapContainer($block, 'section', $this->groupLayout($block), $index),
             'core/columns' => $this->mapContainer($block, 'div', 'columns', $index),
             'core/column' => $this->mapContainer($block, 'div', 'column', $index),
             'core/buttons' => $this->mapContainer($block, 'div', 'buttons', $index),
@@ -53,6 +56,9 @@ final class BasicBlockMapper implements BlockMapper
             'core/button' => $this->mapButton($block, $index),
             'core/image' => $this->mapImageBlock($block, $index),
             'core/spacer' => $this->mapSpacer($block, $index),
+            'core/separator' => $this->mapSeparator($block, $index),
+            'core/list' => $this->mapContainer($block, 'ul', 'list', $index),
+            'core/list-item' => $this->mapListItem($block, $index),
             'core/details' => $this->mapDetails($block, $index),
             'core/accordion' => $this->mapAccordion($block, $index),
             'core/accordion-item' => $this->mapAccordionItem($block, $index),
@@ -69,6 +75,7 @@ final class BasicBlockMapper implements BlockMapper
         $attrs = $this->attrs($block);
         $attributeKeys = ['align', 'className', 'isStackedOnMobile', 'verticalAlignment'];
         $attributes = $this->attributes($attrs, $attributeKeys);
+        $style = $this->styleFromAttrs($attrs, $layout);
 
         if ($layout === 'columns') {
             $innerBlocks = $this->listOfBlocks($block['innerBlocks'] ?? []);
@@ -79,6 +86,19 @@ final class BasicBlockMapper implements BlockMapper
             }
         }
 
+        if ($layout === 'grid') {
+            $layoutAttrs = is_array($attrs['layout'] ?? null) ? $attrs['layout'] : [];
+            $columnCount = isset($layoutAttrs['columnCount']) && is_int($layoutAttrs['columnCount'])
+                ? $layoutAttrs['columnCount']
+                : count($this->listOfBlocks($block['innerBlocks'] ?? []));
+
+            if ($columnCount > 0) {
+                $properties = $style !== null ? $style->properties : [];
+                $properties['gridTemplateColumns'] = sprintf('repeat(%d, minmax(0, 1fr))', $columnCount);
+                $style = new BlockStyle($style !== null ? $style->variant : null, $properties);
+            }
+        }
+
         return new PageBlock(
             id: $this->blockId($block, $layout, $index),
             type: BlockType::CONTAINER,
@@ -86,9 +106,67 @@ final class BasicBlockMapper implements BlockMapper
                 layout: $layout,
                 attributes: $attributes,
             ),
-            style: $this->styleFromAttrs($attrs, $layout),
+            style: $style,
             element: $element,
             children: $this->mapChildren($block),
+        );
+    }
+
+    /** @param array<string, mixed> $block */
+    private function groupLayout(array $block): string
+    {
+        $attrs = $this->attrs($block);
+        $layout = $attrs['layout'] ?? null;
+
+        return is_array($layout) && ($layout['type'] ?? null) === 'grid' ? 'grid' : 'group';
+    }
+
+    /** @param array<string, mixed> $block */
+    private function mapSeparator(array $block, int $index = 0): PageBlock
+    {
+        $attrs = $this->attrs($block);
+        $style = $this->styleFromAttrs($attrs, 'separator');
+        $properties = $style === null ? [] : $style->properties;
+        $separatorColorValue = $properties['color'] ?? $properties['backgroundColor'] ?? 'currentColor';
+        $separatorColor = is_string($separatorColorValue) || is_int($separatorColorValue) || is_float($separatorColorValue)
+            ? (string) $separatorColorValue
+            : 'currentColor';
+        $properties['color'] ??= $separatorColor;
+        $properties['borderTop'] ??= '0px solid ' . $separatorColor;
+        $properties['borderBottom'] ??= '1px solid ' . $separatorColor;
+
+        return new PageBlock(
+            id: $this->blockId($block, 'separator', $index),
+            type: BlockType::SEPARATOR,
+            data: new BasicBlockData(layout: 'separator'),
+            style: new BlockStyle(properties: $properties),
+            element: 'hr',
+        );
+    }
+
+    /**
+     * Gutenberg list items keep their text in innerHTML rather than innerBlocks.
+     * Preserve it in the normalized block so the Angular list is not reduced to empty bullets.
+     *
+     * @param array<string, mixed> $block
+     */
+    private function mapListItem(array $block, int $index = 0): PageBlock
+    {
+        $text = $this->blockText($block);
+
+        if ($text === null) {
+            throw new InvalidArgumentException('List item requires content.');
+        }
+
+        return new PageBlock(
+            id: $this->blockId($block, 'list-item', $index),
+            type: BlockType::CONTAINER,
+            data: new BasicBlockData(
+                text: $text,
+                html: $this->blockHtml($block, 'li'),
+                layout: 'list-item',
+            ),
+            element: 'li',
         );
     }
 
@@ -605,6 +683,11 @@ final class BasicBlockMapper implements BlockMapper
             if (!isset($properties['gap'])) {
                 $properties['gap'] = 'var(--wp--preset--spacing--50)';
             }
+        }
+
+        if ($layout === 'grid') {
+            $properties['display'] = 'grid';
+            $properties['gap'] ??= 'var(--wp--style--block-gap, 1.2rem)';
         }
 
         if (($layout === 'details' || $layout === 'accordion-item') && !isset($properties['margin'])) {
