@@ -47,12 +47,14 @@ final class NavigationController
                 $items = $this->blockNavigation();
 
                 if ($items !== null) {
-                    return new WP_REST_Response([
+                    $payload = [
                         'schemaVersion' => '1.0',
-                        'locale' => $locale,
                         'location' => $location,
                         'items' => $items,
-                    ], 200);
+                    ];
+                    $payload = apply_filters('headless_angular_schema_navigation_response', $payload, $location, $locale);
+
+                    return new WP_REST_Response($payload, 200);
                 }
             }
 
@@ -65,12 +67,14 @@ final class NavigationController
             return new WP_Error('headless_schema_menu_not_found', 'Menu not found.', ['status' => 404]);
         }
 
-        return new WP_REST_Response([
+        $payload = [
             'schemaVersion' => '1.0',
-            'locale' => $locale,
             'location' => $location,
             'items' => $this->tree($items),
-        ], 200);
+        ];
+        $payload = apply_filters('headless_angular_schema_navigation_response', $payload, $location, $locale);
+
+        return new WP_REST_Response($payload, 200);
     }
 
     /**

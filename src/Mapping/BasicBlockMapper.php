@@ -114,6 +114,7 @@ final class BasicBlockMapper implements BlockMapper
             type: BlockType::CONTAINER,
             data: new BasicBlockData(
                 layout: $layout,
+                customCss: $this->customCss($attrs['style']['css'] ?? null),
                 attributes: $attributes,
             ),
             style: $style,
@@ -176,6 +177,7 @@ final class BasicBlockMapper implements BlockMapper
                 text: $text,
                 html: $this->blockHtml($block, 'li'),
                 layout: 'list-item',
+                customCss: $this->customCss($attrs['style']['css'] ?? null),
             ),
             style: $this->styleFromAttrs($attrs, 'list-item'),
             element: 'li',
@@ -284,6 +286,7 @@ final class BasicBlockMapper implements BlockMapper
             type: BlockType::CONTAINER,
             data: new BasicBlockData(
                 layout: 'cover',
+                customCss: $this->customCss($attrs['style']['css'] ?? null),
                 attributes: $this->attributes($attrs, ['align', 'className']),
             ),
             style: $this->coverStyle($attrs),
@@ -311,6 +314,7 @@ final class BasicBlockMapper implements BlockMapper
             data: new BasicBlockData(
                 text: $text,
                 html: $this->blockHtml($block, $element),
+                customCss: $this->customCss($attrs['style']['css'] ?? null),
                 attributes: $this->attributes($attrs, ['level', 'fontSize', 'align', 'className']),
             ),
             style: $this->styleFromAttrs($attrs),
@@ -340,6 +344,7 @@ final class BasicBlockMapper implements BlockMapper
                 target: $this->optionalString($attrs, 'linkTarget'),
                 rel: $this->optionalString($attrs, 'rel'),
                 layout: 'button',
+                customCss: $this->customCss($attrs['style']['css'] ?? null),
                 attributes: $this->attributes($attrs, ['className']),
             ),
             style: $this->buttonStyle($attrs),
@@ -420,6 +425,7 @@ final class BasicBlockMapper implements BlockMapper
                 mimeType: $this->optionalString($attrs, 'mimeType'),
                 caption: $this->optionalString($attrs, 'caption'),
                 alt: $this->optionalString($attrs, 'alt') ?? $this->htmlAttribute($block, 'img', 'alt') ?? '',
+                customCss: $this->customCss($attrs['style']['css'] ?? null),
                 attributes: $attributes,
             ),
             style: $properties !== [] ? new BlockStyle($style?->variant, $properties) : null,
@@ -464,6 +470,7 @@ final class BasicBlockMapper implements BlockMapper
                 summary: $summary,
                 open: $this->optionalBool($attrs, 'showContent'),
                 layout: 'details',
+                customCss: $this->customCss($attrs['style']['css'] ?? null),
                 attributes: $this->attributes($attrs, ['className']),
             ),
             style: $this->styleFromAttrs($attrs, 'details'),
@@ -494,6 +501,7 @@ final class BasicBlockMapper implements BlockMapper
                 summary: $summary,
                 open: $this->optionalBool($attrs, 'openByDefault'),
                 layout: 'accordion-item',
+                customCss: $this->customCss($attrs['style']['css'] ?? null),
                 attributes: $this->attributes($attrs, ['className']),
             ),
             style: $this->styleFromAttrs($attrs, 'accordion-item'),
@@ -526,6 +534,7 @@ final class BasicBlockMapper implements BlockMapper
             data: new BasicBlockData(
                 summary: $summary,
                 layout: 'accordion-item',
+                customCss: $this->customCss($this->attrs($block)['style']['css'] ?? null),
                 attributes: $this->attributes($this->attrs($block), ['className']),
             ),
             style: $this->styleFromAttrs($this->attrs($block)),
@@ -861,6 +870,53 @@ final class BasicBlockMapper implements BlockMapper
     }
 
     /**
+     * Preserve Gutenberg custom CSS as a sanitized, block-local rule set.
+     *
+     * @return string|null
+     */
+    private function customCss(mixed $css): ?string
+    {
+        if (!is_string($css) || trim($css) === '') {
+            return null;
+        }
+
+        if (preg_match('/(?:@import|url\s*\(|expression\s*\(|javascript\s*:|behavior\s*:|-moz-binding)/i', $css)) {
+            return null;
+        }
+
+        preg_match_all('/([^{}]+)\{([^{}]*)\}/', $css, $rules, PREG_SET_ORDER);
+        $safeRules = [];
+
+        foreach ($rules as $rule) {
+            $selector = trim($rule[1]);
+            $declarations = [];
+
+            if ($selector === '' || str_contains($selector, '@') || !preg_match('/^[A-Za-z0-9_.,:#\-\s>+~*\[\]=()"\']+$/', $selector)) {
+                continue;
+            }
+
+            preg_match_all('/([a-z][a-z0-9-]*)\s*:\s*([^;{}]+)/i', $rule[2], $matches, PREG_SET_ORDER);
+
+            foreach ($matches as $match) {
+                $property = strtolower(trim($match[1]));
+                $value = trim($match[2]);
+
+                if ($value === '' || preg_match('/[<>]|url\s*\(|expression\s*\(|javascript\s*:/i', $value)) {
+                    continue;
+                }
+
+                $declarations[] = $property . ': ' . $value . ';';
+            }
+
+            if ($declarations !== []) {
+                $safeRules[] = $selector . '{' . implode('', $declarations) . '}';
+            }
+        }
+
+        return $safeRules !== [] ? implode('', $safeRules) : null;
+    }
+
+    /**
      * @param array<string, mixed> $values
      *
      * @return array<string, string|int|float>
@@ -967,11 +1023,12 @@ final class BasicBlockMapper implements BlockMapper
                 'i' => [],
                 'mark' => [],
                 's' => [],
+                'span' => ['class' => true],
                 'strong' => [],
                 'u' => [],
             ]);
         } else {
-            $html = strip_tags($html, '<a><br><code><em><i><mark><s><strong><u>');
+            $html = strip_tags($html, '<a><br><code><em><i><mark><s><span><strong><u>');
         }
 
         return trim($html) !== '' ? trim($html) : null;

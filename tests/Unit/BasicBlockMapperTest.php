@@ -153,8 +153,13 @@ final class BasicBlockMapperTest extends TestCase
 
         $paragraph = $mapper->map([
             'blockName' => 'core/paragraph',
-            'attrs' => [],
-            'innerHTML' => '<p><strong>Important</strong> text</p>',
+            'attrs' => [
+                'className' => 'skills',
+                'style' => [
+                    'css' => '.skills span { color: #435f64; font-size: 0.8em; }',
+                ],
+            ],
+            'innerHTML' => '<p class="skills has-custom-css"><strong>Important</strong> <span class="skills">Angular</span></p>',
         ]);
         $button = $mapper->map([
             'blockName' => 'core/button',
@@ -165,7 +170,9 @@ final class BasicBlockMapperTest extends TestCase
             'innerHTML' => '<a class="wp-element-button" href="/contact">Contact us</a>',
         ]);
 
-        self::assertSame('<strong>Important</strong> text', $paragraph->data->html);
+        self::assertSame('<strong>Important</strong> <span class="skills">Angular</span>', $paragraph->data->html);
+        self::assertSame('skills', $paragraph->data->attributes['className']);
+        self::assertSame('.skills span{color: #435f64;font-size: 0.8em;}', $paragraph->data->customCss);
         self::assertSame('Contact us', $button->data->text);
         self::assertSame('/contact', $button->data->href);
         self::assertSame('button', $button->data->layout);

@@ -65,7 +65,10 @@ final class PageController
             );
             $serializer = new V1PageSchemaSerializer();
 
-            return new WP_REST_Response($serializer->serialize($builder->build($post, $locale)), 200);
+            $payload = $serializer->serialize($builder->build($post, $locale));
+            $payload = apply_filters('headless_angular_schema_page_response', $payload, $post, $locale);
+
+            return new WP_REST_Response($payload, 200);
         } catch (Throwable) {
             return new WP_Error('headless_schema_normalization_failed', 'Page schema could not be generated.', ['status' => 500]);
         }

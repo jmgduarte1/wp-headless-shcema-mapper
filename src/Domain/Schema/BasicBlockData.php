@@ -24,6 +24,7 @@ final readonly class BasicBlockData
         public ?string $summary = null,
         public ?bool $open = null,
         public ?string $layout = null,
+        public ?string $customCss = null,
         public array $attributes = [],
     ) {
     }
