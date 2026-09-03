@@ -1,0 +1,60 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "headless-angular/featured-cards",
+  "version": "0.1.0",
+  "title": "Headless Angular Featured Cards",
+  "category": "design",
+  "icon": "index-card",
+  "description": "A repeatable collection of featured cards for the headless PageSchema.",
+  "textdomain": "headless-angular-schema",
+  "attributes": {
+    "cards": {
+      "type": "array",
+      "default": [
+        {
+          "id": "card-1",
+          "title": "Featured card",
+          "tags": [],
+          "text": "Add a description."
+        }
+      ]
+    }
+  },
+  "editorScript": "file:./index.js",
+  "style": "file:./style.css",
+  "editorStyle": "file:./editor.css",
+  "supports": {
+    "align": ["wide", "full"],
+    "anchor": true,
+    "color": {
+      "background": true,
+      "text": true,
+      "gradients": true,
+      "link": true
+    },
+    "dimensions": {
+      "minHeight": true
+    },
+    "spacing": {
+      "margin": true,
+      "padding": true,
+      "blockGap": true
+    },
+    "typography": {
+      "fontSize": true,
+      "lineHeight": true,
+      "fontFamily": true,
+      "fontWeight": true,
+      "letterSpacing": true,
+      "textAlign": true
+    },
+    "border": {
+      "color": true,
+      "radius": true,
+      "style": true,
+      "width": true
+    },
+    "html": false
+  }
+}

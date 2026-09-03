@@ -14,6 +14,7 @@ final class BlockType
     public const SPACER = 'spacer';
     public const DETAILS = 'details';
     public const SEPARATOR = 'separator';
+    public const FEATURED_CARDS = 'featured-cards';
 
     private function __construct()
     {

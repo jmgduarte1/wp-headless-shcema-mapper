@@ -1,0 +1,37 @@
+.wp-block-headless-angular-featured-cards {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.headless-featured-card {
+  background: #f7fbfb;
+  border: 1px solid #d6e7e8;
+  border-radius: 0.5rem;
+  box-sizing: border-box;
+  padding: 1rem;
+}
+
+.headless-featured-card__media {
+  align-items: center;
+  background: #eaf5f5;
+  border-radius: 0.75rem;
+  display: flex;
+  height: 5rem;
+  justify-content: center;
+  margin-bottom: 1rem;
+  overflow: hidden;
+  width: 5rem;
+}
+
+.headless-featured-card__media img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.headless-featured-card__tags { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.headless-featured-card__tags span { background: #eaf5f5; border-radius: 999px; padding: 0.25rem 0.5rem; }
+
+@media (max-width: 900px) { .wp-block-headless-angular-featured-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .wp-block-headless-angular-featured-cards { grid-template-columns: 1fr; } }

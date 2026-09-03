@@ -8,6 +8,7 @@ use HeadlessAngular\Schema\Domain\Schema\BlockStyle;
 use HeadlessAngular\Schema\Domain\Schema\BlockType;
 use HeadlessAngular\Schema\Domain\Schema\BasicBlockData;
 use HeadlessAngular\Schema\Domain\Schema\HeroAction;
+use HeadlessAngular\Schema\Domain\Schema\FeaturedCardsData;
 use HeadlessAngular\Schema\Domain\Schema\HeroBlockData;
 use HeadlessAngular\Schema\Domain\Schema\HeroMedia;
 use HeadlessAngular\Schema\Domain\Schema\Link\AnchorLink;
@@ -122,6 +123,8 @@ final class V1PageSchemaSerializer implements PageSchemaSerializer
 
         if ($block->type === BlockType::HERO && $block->data instanceof HeroBlockData) {
             $payload['data'] = $this->serializeHeroData($block->data);
+        } elseif ($block->type === BlockType::FEATURED_CARDS && $block->data instanceof FeaturedCardsData) {
+            $payload['data'] = ['cards' => array_map(fn (array $card): array => $this->serializeFeaturedCard($card), $block->data->cards)];
         } elseif ($block->data instanceof BasicBlockData) {
             $payload['data'] = $this->serializeBasicData($block->data);
         } else {
@@ -140,6 +143,19 @@ final class V1PageSchemaSerializer implements PageSchemaSerializer
         }
 
         return $payload;
+    }
+
+    /**
+     * @param array<string, mixed> $card
+     * @return array<string, mixed>
+     */
+    private function serializeFeaturedCard(array $card): array
+    {
+        if (isset($card['style']) && is_array($card['style'])) {
+            $card['style'] = ['properties' => $card['style']];
+        }
+
+        return $card;
     }
 
     /**

@@ -7,6 +7,7 @@ namespace HeadlessAngular\Schema\Mapping;
 use HeadlessAngular\Schema\Domain\Schema\BasicBlockData;
 use HeadlessAngular\Schema\Domain\Schema\BlockStyle;
 use HeadlessAngular\Schema\Domain\Schema\BlockType;
+use HeadlessAngular\Schema\Domain\Schema\FeaturedCardsData;
 use HeadlessAngular\Schema\Domain\Schema\PageBlock;
 use InvalidArgumentException;
 
@@ -30,6 +31,7 @@ final class BasicBlockMapper implements BlockMapper
         'core/accordion',
         'core/accordion-item',
         'core/accordion-panel',
+        'headless-angular/featured-cards',
     ];
 
     /**
@@ -63,6 +65,7 @@ final class BasicBlockMapper implements BlockMapper
             'core/accordion' => $this->mapAccordion($block, $index),
             'core/accordion-item' => $this->mapAccordionItem($block, $index),
             'core/accordion-panel' => $this->mapContainer($block, 'div', 'accordion-panel', $index),
+            'headless-angular/featured-cards' => $this->mapFeaturedCards($block, $index),
             default => throw new InvalidArgumentException('Unsupported basic Gutenberg block.'),
         };
     }
@@ -176,6 +179,81 @@ final class BasicBlockMapper implements BlockMapper
             ),
             style: $this->styleFromAttrs($attrs, 'list-item'),
             element: 'li',
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $block
+     */
+    private function mapFeaturedCards(array $block, int $index = 0): PageBlock
+    {
+        $attrs = $this->attrs($block);
+        $rawCards = is_array($attrs['cards'] ?? null) ? $attrs['cards'] : [];
+        $cards = [];
+
+        foreach ($rawCards as $cardIndex => $rawCard) {
+            if (!is_array($rawCard)) {
+                continue;
+            }
+
+            $title = $this->optionalString($rawCard, 'title');
+            $text = $this->optionalString($rawCard, 'text');
+            if ($title === null || $text === null) {
+                continue;
+            }
+
+            $tags = [];
+            if (is_array($rawCard['tags'] ?? null)) {
+                foreach ($rawCard['tags'] as $tag) {
+                    if (is_string($tag) && trim($tag) !== '') {
+                        $tags[] = trim(strip_tags($tag));
+                    }
+                }
+            }
+
+            $card = [
+                'id' => $this->optionalString($rawCard, 'id') ?? 'card-' . $cardIndex,
+                'title' => $title,
+                'tags' => $tags,
+                'text' => $text,
+            ];
+
+            $icon = $this->optionalString($rawCard, 'icon');
+            if ($icon !== null && preg_match('/^[A-Za-z0-9_-]+$/', $icon)) {
+                $card['icon'] = $icon;
+            }
+
+            if (is_array($rawCard['image'] ?? null)) {
+                $image = $rawCard['image'];
+                $url = $this->optionalString($image, 'url');
+                if ($url !== null) {
+                    $card['image'] = [
+                        'src' => $this->safeUrl($url),
+                        'alt' => $this->optionalString($image, 'alt') ?? '',
+                    ];
+                }
+            }
+
+            if (isset($rawCard['style']) && is_array($rawCard['style'])) {
+                $style = $this->styleFromAttrs(['style' => $rawCard['style']]);
+                if ($style !== null) {
+                    $card['style'] = $style->properties;
+                }
+            }
+
+            $cards[] = $card;
+        }
+
+        if ($cards === []) {
+            throw new InvalidArgumentException('Featured cards requires at least one valid card.');
+        }
+
+        return new PageBlock(
+            id: $this->blockId($block, 'featured-cards', $index),
+            type: BlockType::FEATURED_CARDS,
+            data: new FeaturedCardsData($cards),
+            style: $this->styleFromAttrs($attrs),
+            element: 'section',
         );
     }
 
@@ -646,6 +724,7 @@ final class BasicBlockMapper implements BlockMapper
         $lineHeight = $this->nestedResponsiveValue($attrs, ['style', 'typography', 'lineHeight']) ?? $this->optionalString($attrs, 'lineHeight');
         $fontStyle = $this->nestedResponsiveValue($attrs, ['style', 'typography', 'fontStyle']) ?? $this->optionalString($attrs, 'fontStyle');
         $textDecoration = $this->nestedResponsiveValue($attrs, ['style', 'typography', 'textDecoration']) ?? $this->optionalString($attrs, 'textDecoration');
+        $textAlign = $this->nestedResponsiveValue($attrs, ['style', 'typography', 'textAlign']) ?? $this->optionalString($attrs, 'textAlign');
 
         if ($fontSize !== null) {
             $properties['fontSize'] = $fontSize;
@@ -676,6 +755,9 @@ final class BasicBlockMapper implements BlockMapper
         }
         if ($textDecoration !== null) {
             $properties['textDecoration'] = $this->normalizeResponsiveStyleValue($textDecoration);
+        }
+        if ($textAlign !== null) {
+            $properties['textAlign'] = $this->normalizeResponsiveStyleValue($textAlign);
         }
 
         // Borders
@@ -754,6 +836,7 @@ final class BasicBlockMapper implements BlockMapper
             'flex-wrap' => 'flexWrap',
             'justify-content' => 'justifyContent',
             'align-items' => 'alignItems',
+            'text-align' => 'textAlign',
             'border-radius' => 'borderRadius',
             'outline' => 'outline',
             'outline-offset' => 'outlineOffset',

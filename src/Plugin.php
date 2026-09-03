@@ -36,6 +36,7 @@ final class Plugin
     public function registerBlocks(): void
     {
         register_block_type(HEADLESS_ANGULAR_SCHEMA_PATH . 'blocks/hero');
+        register_block_type(HEADLESS_ANGULAR_SCHEMA_PATH . 'blocks/featured-cards');
     }
 
     public function registerRestRoutes(): void

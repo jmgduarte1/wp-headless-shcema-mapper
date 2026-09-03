@@ -319,6 +319,37 @@ final class BasicBlockMapperTest extends TestCase
         ], $grid->style?->properties['gridTemplateColumns']);
     }
 
+    public function testMapsFeaturedCardsWithImageAndIconData(): void
+    {
+        $block = (new BasicBlockMapper())->map([
+            'blockName' => 'headless-angular/featured-cards',
+            'attrs' => [
+                'cards' => [
+                    [
+                        'id' => 'frontend',
+                        'title' => 'Frontend Engineering',
+                        'tags' => ['TypeScript', 'Angular'],
+                        'text' => 'Component-driven development.',
+                        'icon' => 'CodeXml',
+                    ],
+                    [
+                        'id' => 'commerce',
+                        'title' => 'Commerce',
+                        'tags' => ['Magento'],
+                        'text' => 'Enterprise commerce delivery.',
+                        'image' => ['url' => 'https://example.com/commerce.webp', 'alt' => 'Commerce'],
+                    ],
+                ],
+            ],
+        ]);
+
+        self::assertSame(BlockType::FEATURED_CARDS, $block->type);
+        self::assertCount(2, $block->data->cards);
+        self::assertSame('CodeXml', $block->data->cards[0]['icon']);
+        self::assertSame(['TypeScript', 'Angular'], $block->data->cards[0]['tags']);
+        self::assertSame('https://example.com/commerce.webp', $block->data->cards[1]['image']['src']);
+    }
+
     public function testPreservesResponsiveTypographyAndSpacing(): void
     {
         $block = (new BasicBlockMapper())->map([
