@@ -15,6 +15,12 @@ final class BlockType
     public const DETAILS = 'details';
     public const SEPARATOR = 'separator';
     public const FEATURED_CARDS = 'featured-cards';
+    public const TIMELINE = 'timeline';
+    public const GALLERY = 'gallery';
+    public const TABS = 'tabs';
+    public const ACCORDION = 'accordion';
+    public const TOOLTIP = 'tooltip';
+    public const FORM = 'form';
 
     private function __construct()
     {

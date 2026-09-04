@@ -408,4 +408,101 @@ final class BasicBlockMapperTest extends TestCase
         self::assertSame('1', $image->style?->properties['aspectRatio']);
         self::assertSame('cover', $image->style?->properties['objectFit']);
     }
+
+    public function testMapsBlockShadowFromGutenbergStyle(): void
+    {
+        $block = (new BasicBlockMapper())->map([
+            'blockName' => 'core/columns',
+            'attrs' => [
+                'style' => [
+                    'shadow' => 'var:preset|shadow|natural',
+                ],
+            ],
+        ]);
+
+        self::assertSame('var(--wp--preset--shadow--natural)', $block->style?->properties['boxShadow']);
+    }
+
+    public function testMapsNativeTabsAndNestedBlocks(): void
+    {
+        $tabs = (new BasicBlockMapper())->map([
+            'blockName' => 'core/tabs',
+            'innerBlocks' => [
+                [
+                    'blockName' => 'core/tab-panels',
+                    'innerBlocks' => [
+                        [
+                            'blockName' => 'core/tab-panel',
+                            'attrs' => ['label' => 'Overview'],
+                            'innerBlocks' => [
+                                ['blockName' => 'core/paragraph', 'attrs' => ['content' => 'Panel content']],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        self::assertSame(BlockType::TABS, $tabs->type);
+        self::assertSame('Overview', $tabs->data->tabs[0]['label']);
+        self::assertSame(BlockType::TEXT, $tabs->data->tabs[0]['blocks'][0]->type);
+    }
+
+    public function testMapsNativeAccordionItemsAndNestedBlocks(): void
+    {
+        $accordion = (new BasicBlockMapper())->map([
+            'blockName' => 'core/accordion',
+            'innerBlocks' => [
+                [
+                    'blockName' => 'core/accordion-item',
+                    'attrs' => ['title' => 'First item', 'openByDefault' => true],
+                    'innerBlocks' => [
+                        ['blockName' => 'core/paragraph', 'attrs' => ['content' => 'Accordion content']],
+                    ],
+                ],
+            ],
+        ]);
+
+        self::assertSame(BlockType::ACCORDION, $accordion->type);
+        self::assertSame('First item', $accordion->data->payload['items'][0]['title']);
+        self::assertTrue($accordion->data->payload['items'][0]['expanded']);
+        self::assertSame('Accordion content', $accordion->data->payload['items'][0]['blocks'][0]->data->text);
+    }
+
+    public function testMapsNativeQuoteAsSemanticContainer(): void
+    {
+        $quote = (new BasicBlockMapper())->map([
+            'blockName' => 'core/quote',
+            'attrs' => [],
+            'innerBlocks' => [
+                ['blockName' => 'core/paragraph', 'attrs' => ['content' => 'This is a test of quotes.']],
+            ],
+        ]);
+
+        self::assertSame(BlockType::CONTAINER, $quote->type);
+        self::assertSame('blockquote', $quote->element);
+        self::assertSame('quote', $quote->data->layout);
+        self::assertCount(1, $quote->children);
+        self::assertSame('This is a test of quotes.', $quote->children[0]->data->text);
+    }
+
+    public function testMapsTimelineDefaultsWhenExistingBlockHasNoHeaderAttributes(): void
+    {
+        $timeline = (new BasicBlockMapper())->map([
+            'blockName' => 'headless-angular/timeline',
+            'attrs' => [
+                'periods' => [[
+                    'start' => '2022-09',
+                    'end' => '2026-04',
+                    'title' => 'Role',
+                    'text' => 'Description',
+                    'tags' => [],
+                ]],
+            ],
+        ]);
+
+        self::assertSame('Experience', $timeline->data->eyebrow);
+        self::assertSame('Recent leadership and delivery', $timeline->data->title);
+    }
+
 }

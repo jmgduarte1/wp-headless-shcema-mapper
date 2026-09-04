@@ -50,7 +50,8 @@ final class NavigationController
                     $payload = [
                         'schemaVersion' => '1.0',
                         'location' => $location,
-                        'items' => $items,
+                        'menu' => $this->menuMetadata($location),
+                        'items' => $this->materialItems($items),
                     ];
                     $payload = apply_filters('headless_angular_schema_navigation_response', $payload, $location, $locale);
 
@@ -70,7 +71,8 @@ final class NavigationController
         $payload = [
             'schemaVersion' => '1.0',
             'location' => $location,
-            'items' => $this->tree($items),
+            'menu' => $this->menuMetadata($location),
+            'items' => $this->materialItems($this->tree($items)),
         ];
         $payload = apply_filters('headless_angular_schema_navigation_response', $payload, $location, $locale);
 
@@ -238,6 +240,34 @@ final class NavigationController
         unset($node);
 
         return $roots;
+    }
+
+    /**
+     * Add the small amount of presentation metadata needed by Material menu
+     * triggers without coupling the public contract to Angular internals.
+     *
+     * @param list<array<string, mixed>> $items
+     * @return list<array<string, mixed>>
+     */
+    private function materialItems(array $items): array
+    {
+        foreach ($items as &$item) {
+            $children = is_array($item['children'] ?? null) ? $item['children'] : [];
+            $item['children'] = $this->materialItems($children);
+            $item['hasChildren'] = $item['children'] !== [];
+        }
+        unset($item);
+
+        return $items;
+    }
+
+    /** @return array{ariaLabel: string, orientation: string} */
+    private function menuMetadata(string $location): array
+    {
+        return [
+            'ariaLabel' => ucfirst($location) . ' navigation',
+            'orientation' => 'horizontal',
+        ];
     }
 
     /**

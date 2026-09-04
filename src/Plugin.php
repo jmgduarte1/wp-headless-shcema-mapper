@@ -37,11 +37,14 @@ final class Plugin
     {
         register_block_type(HEADLESS_ANGULAR_SCHEMA_PATH . 'blocks/hero');
         register_block_type(HEADLESS_ANGULAR_SCHEMA_PATH . 'blocks/featured-cards');
+        register_block_type(HEADLESS_ANGULAR_SCHEMA_PATH . 'blocks/timeline');
+        register_block_type(HEADLESS_ANGULAR_SCHEMA_PATH . 'blocks/tooltip');
     }
 
     public function registerRestRoutes(): void
     {
         (new Rest\PageController())->registerRoutes();
         (new Rest\NavigationController())->registerRoutes();
+        (new Rest\FormController())->registerRoutes();
     }
 }

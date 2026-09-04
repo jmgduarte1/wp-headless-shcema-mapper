@@ -9,7 +9,11 @@ use HeadlessAngular\Schema\Domain\Schema\BlockType;
 use HeadlessAngular\Schema\Domain\Schema\BasicBlockData;
 use HeadlessAngular\Schema\Domain\Schema\HeroAction;
 use HeadlessAngular\Schema\Domain\Schema\FeaturedCardsData;
+use HeadlessAngular\Schema\Domain\Schema\FormData;
 use HeadlessAngular\Schema\Domain\Schema\HeroBlockData;
+use HeadlessAngular\Schema\Domain\Schema\InteractiveBlockData;
+use HeadlessAngular\Schema\Domain\Schema\TabsData;
+use HeadlessAngular\Schema\Domain\Schema\TimelineData;
 use HeadlessAngular\Schema\Domain\Schema\HeroMedia;
 use HeadlessAngular\Schema\Domain\Schema\Link\AnchorLink;
 use HeadlessAngular\Schema\Domain\Schema\Link\ExternalLink;
@@ -56,10 +60,38 @@ final class V1PageSchemaSerializer implements PageSchemaSerializer
             'element' => $block->element,
         ];
 
+        if ($block->align !== null) {
+            $payload['align'] = $block->align;
+        }
+
         if ($block->type === BlockType::HERO && $block->data instanceof HeroBlockData) {
             $payload['data'] = $this->serializeHeroData($block->data);
         } elseif ($block->type === BlockType::FEATURED_CARDS && $block->data instanceof FeaturedCardsData) {
             $payload['data'] = ['cards' => array_map(fn (array $card): array => $this->serializeFeaturedCard($card), $block->data->cards)];
+        } elseif ($block->type === BlockType::TIMELINE && $block->data instanceof TimelineData) {
+            $payload['data'] = ['periods' => array_map(function(array $period): array { if(isset($period['style'])&&is_array($period['style'])) $period['style']=['properties'=>$period['style']]; return $period; },$block->data->periods), 'eyebrow'=>$block->data->eyebrow, 'title'=>$block->data->title, 'linkLabel'=>$block->data->linkLabel, 'linkUrl'=>$block->data->linkUrl, 'linkPosition'=>$block->data->linkPosition];
+        } elseif ($block->type === BlockType::FORM && $block->data instanceof FormData) {
+            $payload['data'] = [
+                'formId' => $block->data->formId,
+                'fields' => $block->data->fields,
+                'submit' => $block->data->submit,
+                'successMessage' => $block->data->successMessage,
+                'failureMessage' => $block->data->failureMessage,
+            ];
+        } elseif ($block->data instanceof InteractiveBlockData) {
+            $payload['data'] = $block->data->payload;
+        } elseif ($block->data instanceof TabsData) {
+            $payload['data'] = [
+                'tabs' => array_map(
+                    fn (array $tab): array => [
+                        'id' => $tab['id'],
+                        'label' => $tab['label'],
+                        'blocks' => array_map(fn (PageBlock $child): array => $this->serializeBlock($child), $tab['blocks']),
+                    ],
+                    $block->data->tabs,
+                ),
+                'activeIndex' => $block->data->activeIndex,
+            ];
         } elseif ($block->data instanceof BasicBlockData) {
             $payload['data'] = $this->serializeBasicData($block->data);
         } else {

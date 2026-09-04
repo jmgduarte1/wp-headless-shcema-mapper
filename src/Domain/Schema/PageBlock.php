@@ -16,6 +16,7 @@ final readonly class PageBlock
         public ?BlockStyle $style = null,
         public string $element = 'section',
         public array $children = [],
+        public ?string $align = null,
     ) {
     }
 }

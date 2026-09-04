@@ -39,7 +39,7 @@ final readonly class PageSchemaBuilder
      *
      * @return list<PageBlock>
      */
-    private function mapBlocks(array $rawBlocks): array
+    private function mapBlocks(array $rawBlocks, int $depth = 0): array
     {
         $mappedBlocks = [];
 
@@ -49,10 +49,24 @@ final readonly class PageSchemaBuilder
             }
 
             try {
-                $mappedBlocks[] = $this->mapperRegistry->map($rawBlock);
+                $mapped = $this->mapperRegistry->map($rawBlock);
+                if ($depth === 0) {
+                    $attrs = is_array($rawBlock['attrs'] ?? null) ? $rawBlock['attrs'] : [];
+                    $align = is_string($attrs['align'] ?? null) ? $attrs['align'] : 'none';
+                    $mapped = new PageBlock(
+                        id: $mapped->id,
+                        type: $mapped->type,
+                        data: $mapped->data,
+                        style: $mapped->style,
+                        element: $mapped->element,
+                        children: $mapped->children,
+                        align: $align,
+                    );
+                }
+                $mappedBlocks[] = $mapped;
             } catch (InvalidArgumentException) {
                 $innerBlocks = is_array($rawBlock['innerBlocks'] ?? null) ? $rawBlock['innerBlocks'] : [];
-                $mappedBlocks = array_merge($mappedBlocks, $this->mapBlocks($innerBlocks));
+                $mappedBlocks = array_merge($mappedBlocks, $this->mapBlocks($innerBlocks, $depth));
             }
         }
 

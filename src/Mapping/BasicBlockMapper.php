@@ -8,6 +8,10 @@ use HeadlessAngular\Schema\Domain\Schema\BasicBlockData;
 use HeadlessAngular\Schema\Domain\Schema\BlockStyle;
 use HeadlessAngular\Schema\Domain\Schema\BlockType;
 use HeadlessAngular\Schema\Domain\Schema\FeaturedCardsData;
+use HeadlessAngular\Schema\Domain\Schema\FormData;
+use HeadlessAngular\Schema\Domain\Schema\InteractiveBlockData;
+use HeadlessAngular\Schema\Domain\Schema\TabsData;
+use HeadlessAngular\Schema\Domain\Schema\TimelineData;
 use HeadlessAngular\Schema\Domain\Schema\PageBlock;
 use InvalidArgumentException;
 
@@ -20,6 +24,7 @@ final class BasicBlockMapper implements BlockMapper
         'core/cover',
         'core/heading',
         'core/paragraph',
+        'core/quote',
         'core/buttons',
         'core/button',
         'core/image',
@@ -32,6 +37,11 @@ final class BasicBlockMapper implements BlockMapper
         'core/accordion-item',
         'core/accordion-panel',
         'headless-angular/featured-cards',
+        'headless-angular/timeline',
+        'headless-angular/tooltip',
+        'core/gallery',
+        'core/tabs',
+        'wpforms/form-selector',
     ];
 
     /**
@@ -55,6 +65,7 @@ final class BasicBlockMapper implements BlockMapper
             'core/cover' => $this->mapCover($block, $index),
             'core/heading' => $this->mapText($block, $this->headingElement($block), $index),
             'core/paragraph' => $this->mapText($block, 'p', $index),
+            'core/quote' => $this->mapContainer($block, 'blockquote', 'quote', $index),
             'core/button' => $this->mapButton($block, $index),
             'core/image' => $this->mapImageBlock($block, $index),
             'core/spacer' => $this->mapSpacer($block, $index),
@@ -66,6 +77,11 @@ final class BasicBlockMapper implements BlockMapper
             'core/accordion-item' => $this->mapAccordionItem($block, $index),
             'core/accordion-panel' => $this->mapContainer($block, 'div', 'accordion-panel', $index),
             'headless-angular/featured-cards' => $this->mapFeaturedCards($block, $index),
+            'headless-angular/timeline' => $this->mapTimeline($block, $index),
+            'headless-angular/tooltip' => $this->mapTooltip($block, $index),
+            'core/gallery' => $this->mapGallery($block, $index),
+            'core/tabs' => $this->mapTabs($block, $index),
+            'wpforms/form-selector' => $this->mapForm($block, $index),
             default => throw new InvalidArgumentException('Unsupported basic Gutenberg block.'),
         };
     }
@@ -254,6 +270,246 @@ final class BasicBlockMapper implements BlockMapper
             id: $this->blockId($block, 'featured-cards', $index),
             type: BlockType::FEATURED_CARDS,
             data: new FeaturedCardsData($cards),
+            style: $this->styleFromAttrs($attrs),
+            element: 'section',
+        );
+    }
+
+    /** @param array<string, mixed> $block */
+    private function mapTimeline(array $block, int $index = 0): PageBlock
+    {
+        $attrs = $this->attrs($block); $periods = [];
+        foreach (is_array($attrs['periods'] ?? null) ? $attrs['periods'] : [] as $periodIndex => $raw) {
+            if (!is_array($raw)) continue;
+            $start=$this->optionalString($raw,'start'); $end=$this->optionalString($raw,'end'); $title=$this->optionalString($raw,'title'); $text=$this->optionalString($raw,'text');
+            if ($start===null || $end===null || $title===null || $text===null) continue;
+            $tags=[]; foreach (is_array($raw['tags']??null)?$raw['tags']:[] as $tag) if(is_string($tag)&&trim($tag)!=='') $tags[]=trim(strip_tags($tag));
+            $periods[]=['id'=>$this->optionalString($raw,'id')??'period-'.$periodIndex,'start'=>$start,'end'=>$end,'title'=>$title,'text'=>$text,'tags'=>$tags];
+            if(is_array($raw['style']??null)){ $style=$this->styleFromAttrs(['style'=>$raw['style']]); if($style!==null) $periods[array_key_last($periods)]['style']=$style->properties; }
+        }
+        if($periods===[]) throw new InvalidArgumentException('Timeline requires at least one valid period.');
+        $position=$this->optionalString($attrs,'linkPosition')??'end'; if(!in_array($position,['start','center','end'],true)) $position='end';
+        return new PageBlock(id:$this->blockId($block,'timeline',$index),type:BlockType::TIMELINE,data:new TimelineData($periods,$this->optionalString($attrs,'eyebrow') ?? 'Experience',$this->optionalString($attrs,'title') ?? 'Recent leadership and delivery',$this->optionalString($attrs,'linkLabel'),$this->optionalString($attrs,'linkUrl'),$position),style:$this->styleFromAttrs($attrs),element:'section');
+    }
+
+    /** @param array<string, mixed> $block */
+    private function mapTooltip(array $block, int $index = 0): PageBlock
+    {
+        $attrs = $this->attrs($block);
+        $label = $this->optionalString($attrs, 'label');
+        $content = $this->optionalString($attrs, 'content');
+        if ($label === null || $content === null) {
+            throw new InvalidArgumentException('Tooltip requires label and content.');
+        }
+        return new PageBlock(
+            id: $this->blockId($block, 'tooltip', $index),
+            type: BlockType::TOOLTIP,
+            data: new InteractiveBlockData(['label' => $label, 'content' => $content]),
+            style: $this->styleFromAttrs($attrs),
+            element: 'span',
+        );
+    }
+
+    /** @param array<string, mixed> $block */
+    private function mapForm(array $block, int $index = 0): PageBlock
+    {
+        $attrs = $this->attrs($block);
+        $formId = absint((string) ($attrs['formId'] ?? $attrs['form_id'] ?? '0'));
+
+        if ($formId < 1 || !function_exists('wpforms')) {
+            throw new InvalidArgumentException('WPForms block requires an active form.');
+        }
+
+        $formHandler = wpforms()->obj('form');
+        $formData = $formHandler ? $formHandler->get($formId, ['content_only' => true]) : false;
+
+        if (!is_array($formData) || !is_array($formData['fields'] ?? null)) {
+            throw new InvalidArgumentException('WPForms form could not be loaded.');
+        }
+
+        $allowedTypes = ['text', 'textarea', 'email', 'number', 'select', 'radio', 'checkbox', 'name'];
+        $fields = [];
+
+        foreach ($formData['fields'] as $field) {
+            if (!is_array($field) || !isset($field['id'], $field['type']) || !in_array($field['type'], $allowedTypes, true)) {
+                continue;
+            }
+
+            $fieldId = absint((string) $field['id']);
+            if ($fieldId < 1) {
+                continue;
+            }
+
+            $normalized = [
+                'name' => (string) $fieldId,
+                'type' => $field['type'] === 'name' ? 'name' : $field['type'],
+                'label' => $this->sanitizeFormText($field['label'] ?? 'Field'),
+                'required' => !empty($field['required']),
+            ];
+
+            foreach (['placeholder', 'description'] as $source) {
+                $value = $this->sanitizeFormText($field[$source] ?? '');
+                if ($value !== '') {
+                    $normalized[$source === 'description' ? 'hint' : $source] = $value;
+                }
+            }
+
+            if (in_array($field['type'], ['select', 'radio', 'checkbox'], true) && is_array($field['choices'] ?? null)) {
+                $options = [];
+                foreach ($field['choices'] as $choice) {
+                    if (!is_array($choice)) {
+                        continue;
+                    }
+                    $label = $this->sanitizeFormText($choice['label'] ?? '');
+                    $value = $this->sanitizeFormText($choice['value'] ?? $label);
+                    if ($label !== '' && $value !== '') {
+                        $options[] = ['label' => $label, 'value' => $value];
+                    }
+                }
+                if ($options !== []) {
+                    $normalized['options'] = $options;
+                }
+            }
+
+            $fields[] = $normalized;
+        }
+
+        if ($fields === []) {
+            throw new InvalidArgumentException('WPForms form has no supported fields.');
+        }
+
+        $settings = is_array($formData['settings'] ?? null) ? $formData['settings'] : [];
+        $submitLabel = $this->sanitizeFormText($settings['submit_text'] ?? 'Submit') ?: 'Submit';
+        $successMessage = $this->formConfirmationMessage($settings) ?: 'Your form has been submitted successfully.';
+
+        return new PageBlock(
+            id: $this->blockId($block, 'form', $index),
+            type: BlockType::FORM,
+            data: new FormData(
+                formId: (string) $formId,
+                fields: $fields,
+                submit: [
+                    'label' => $submitLabel,
+                    // Use the nonce action expected by WPForms' native processor.
+                    'nonce' => function_exists('wp_create_nonce') ? wp_create_nonce('wpforms::form_' . $formId) : '',
+                ],
+                successMessage: $successMessage,
+                failureMessage: 'The form could not be submitted. Please review the fields and try again.',
+            ),
+            style: $this->styleFromAttrs($attrs),
+            element: 'form',
+        );
+    }
+
+    private function sanitizeFormText(mixed $value): string
+    {
+        return trim(wp_strip_all_tags((string) $value));
+    }
+
+    /** @param array<string, mixed> $settings */
+    private function formConfirmationMessage(array $settings): string
+    {
+        $message = $settings['confirmation_message'] ?? '';
+        $confirmations = is_array($settings['confirmations'] ?? null) ? $settings['confirmations'] : [];
+        foreach ($confirmations as $confirmation) {
+            if (is_array($confirmation) && ($confirmation['type'] ?? '') === 'message' && isset($confirmation['message'])) {
+                $message = $confirmation['message'];
+            }
+        }
+        return $this->sanitizeFormText($message);
+    }
+
+    /** @param array<string, mixed> $block */
+    private function mapTabs(array $block, int $index = 0): PageBlock
+    {
+        $attrs = $this->attrs($block);
+        $panels = [];
+        foreach ($this->listOfBlocks($block['innerBlocks'] ?? []) as $container) {
+            if (($container['blockName'] ?? null) !== 'core/tab-panels') {
+                continue;
+            }
+
+            foreach ($this->listOfBlocks($container['innerBlocks'] ?? []) as $panelIndex => $panel) {
+                if (($panel['blockName'] ?? null) !== 'core/tab-panel') {
+                    continue;
+                }
+                $attrs = $this->attrs($panel);
+                $label = $this->optionalString($attrs, 'label') ?? 'Tab ' . ($panelIndex + 1);
+                $panels[] = [
+                    'id' => $this->blockId($panel, 'tab-panel', $panelIndex),
+                    'label' => $label,
+                    'blocks' => $this->mapNestedBasicBlocks($panel['innerBlocks'] ?? []),
+                ];
+            }
+        }
+
+        if ($panels === []) {
+            throw new InvalidArgumentException('Tabs requires at least one tab panel.');
+        }
+
+        return new PageBlock(
+            id: $this->blockId($block, 'tabs', $index),
+            type: BlockType::TABS,
+            data: new TabsData($panels),
+            style: $this->styleFromAttrs($attrs),
+            element: 'section',
+        );
+    }
+
+    /**
+     * Map nested Gutenberg content while preserving the same basic-block rules
+     * used by the page builder when a wrapper is not directly supported.
+     *
+     * @param array<mixed> $rawBlocks
+     * @return list<PageBlock>
+     */
+    private function mapNestedBasicBlocks(array $rawBlocks): array
+    {
+        $mapped = [];
+        foreach ($rawBlocks as $rawBlock) {
+            if (!is_array($rawBlock) || ($rawBlock['blockName'] ?? null) === null) {
+                continue;
+            }
+            try {
+                $mapped[] = $this->map($rawBlock);
+            } catch (InvalidArgumentException) {
+                $mapped = array_merge($mapped, $this->mapNestedBasicBlocks($rawBlock['innerBlocks'] ?? []));
+            }
+        }
+        return $mapped;
+    }
+
+    /** @param array<string, mixed> $block */
+    private function mapGallery(array $block, int $index = 0): PageBlock
+    {
+        $images = [];
+        foreach ($this->listOfBlocks($block['innerBlocks'] ?? []) as $imageIndex => $innerBlock) {
+            if (($innerBlock['blockName'] ?? null) !== 'core/image') {
+                continue;
+            }
+            $attrs = $this->attrs($innerBlock);
+            $src = $this->optionalString($attrs, 'url') ?? $this->htmlAttribute($innerBlock, 'img', 'src');
+            if ($src === null) {
+                continue;
+            }
+            $images[] = [
+                'id' => $this->blockId($innerBlock, 'gallery-image', $imageIndex),
+                'src' => $this->safeUrl($src),
+                'alt' => $this->optionalString($attrs, 'alt') ?? $this->htmlAttribute($innerBlock, 'img', 'alt') ?? '',
+                'caption' => $this->optionalString($attrs, 'caption'),
+            ];
+        }
+        if ($images === []) {
+            throw new InvalidArgumentException('Gallery requires at least one image.');
+        }
+        $attrs = $this->attrs($block);
+        return new PageBlock(
+            id: $this->blockId($block, 'gallery', $index),
+            type: BlockType::GALLERY,
+            data: new InteractiveBlockData([
+                'images' => $images,
+                'columns' => max(1, min((int) ($attrs['columns'] ?? 3), 6)),
+            ]),
             style: $this->styleFromAttrs($attrs),
             element: 'section',
         );
@@ -515,31 +771,39 @@ final class BasicBlockMapper implements BlockMapper
      */
     private function mapAccordion(array $block, int $index = 0): PageBlock
     {
-        foreach ($this->listOfBlocks($block['innerBlocks'] ?? []) as $innerIndex => $innerBlock) {
-            if (($innerBlock['blockName'] ?? null) === 'core/accordion-item') {
-                return $this->mapContainer($block, 'div', 'accordion', $index);
+        $items = [];
+        foreach ($this->listOfBlocks($block['innerBlocks'] ?? []) as $itemIndex => $innerBlock) {
+            if (($innerBlock['blockName'] ?? null) !== 'core/accordion-item') {
+                continue;
             }
+            $summary = $this->optionalString($this->attrs($innerBlock), 'title')
+                ?? $this->htmlClassText($innerBlock, 'wp-block-accordion-heading__toggle-title')
+                ?? $this->firstDescendantClassText($innerBlock, 'wp-block-accordion-heading__toggle-title')
+                ?? $this->htmlElementText($innerBlock, 'button');
+            if ($summary === null) {
+                continue;
+            }
+            $itemAttrs = $this->attrs($innerBlock);
+            $items[] = [
+                'id' => $this->blockId($innerBlock, 'accordion-item', $itemIndex),
+                'title' => $summary,
+                'expanded' => $this->optionalBool($itemAttrs, 'openByDefault') ?? false,
+                'blocks' => $this->mapAccordionPanelChildren($innerBlock),
+            ];
         }
-
-        $summary = $this->htmlClassText($block, 'wp-block-accordion-heading__toggle-title')
-            ?? $this->firstDescendantClassText($block, 'wp-block-accordion-heading__toggle-title');
-
-        if ($summary === null) {
-            return $this->mapContainer($block, 'div', 'accordion', $index);
+        if ($items === []) {
+            throw new InvalidArgumentException('Accordion requires at least one valid item.');
         }
-
+        $attrs = $this->attrs($block);
         return new PageBlock(
             id: $this->blockId($block, 'accordion', $index),
-            type: BlockType::DETAILS,
-            data: new BasicBlockData(
-                summary: $summary,
-                layout: 'accordion-item',
-                customCss: $this->customCss($this->attrs($block)['style']['css'] ?? null),
-                attributes: $this->attributes($this->attrs($block), ['className']),
-            ),
-            style: $this->styleFromAttrs($this->attrs($block)),
-            element: 'details',
-            children: $this->mapAccordionPanelChildren($block),
+            type: BlockType::ACCORDION,
+            data: new InteractiveBlockData([
+                'items' => $items,
+                'allowMultiple' => $this->optionalBool($attrs, 'multiple') ?? true,
+            ]),
+            style: $this->styleFromAttrs($attrs),
+            element: 'section',
         );
     }
 
@@ -769,6 +1033,16 @@ final class BasicBlockMapper implements BlockMapper
             $properties['textAlign'] = $this->normalizeResponsiveStyleValue($textAlign);
         }
 
+        // Gutenberg stores block shadows under style.shadow or as a preset slug.
+        $boxShadow = $this->nestedResponsiveValue($attrs, ['style', 'shadow']);
+        $presetShadow = $this->optionalString($attrs, 'shadow');
+
+        if ($boxShadow !== null) {
+            $properties['boxShadow'] = $boxShadow;
+        } elseif ($presetShadow !== null) {
+            $properties['boxShadow'] = $this->presetStyleValue('shadow', $presetShadow);
+        }
+
         // Borders
         $radius = $attrs['style']['border']['radius'] ?? null;
         if (is_array($radius)) {
@@ -850,6 +1124,7 @@ final class BasicBlockMapper implements BlockMapper
             'outline' => 'outline',
             'outline-offset' => 'outlineOffset',
             'position' => 'position',
+            'box-shadow' => 'boxShadow',
         ];
         $properties = [];
 
