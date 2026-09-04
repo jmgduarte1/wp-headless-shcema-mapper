@@ -24,6 +24,7 @@ final class BasicBlockMapper implements BlockMapper
         'core/cover',
         'core/heading',
         'core/paragraph',
+        'core/html',
         'core/quote',
         'core/buttons',
         'core/button',
@@ -65,6 +66,7 @@ final class BasicBlockMapper implements BlockMapper
             'core/cover' => $this->mapCover($block, $index),
             'core/heading' => $this->mapText($block, $this->headingElement($block), $index),
             'core/paragraph' => $this->mapText($block, 'p', $index),
+            'core/html' => $this->mapCustomHtml($block, $index),
             'core/quote' => $this->mapContainer($block, 'blockquote', 'quote', $index),
             'core/button' => $this->mapButton($block, $index),
             'core/image' => $this->mapImageBlock($block, $index),
@@ -575,6 +577,41 @@ final class BasicBlockMapper implements BlockMapper
             ),
             style: $this->styleFromAttrs($attrs),
             element: $element,
+        );
+    }
+
+    /**
+     * Map Gutenberg's native Custom HTML block while keeping its markup safe.
+     * This is also used for fragment anchors such as <a id="expertise"></a>.
+     *
+     * @param array<string, mixed> $block
+     */
+    private function mapCustomHtml(array $block, int $index = 0): PageBlock
+    {
+        $attrs = $this->attrs($block);
+        $html = $this->customHtml($block);
+
+        if ($html === null) {
+            throw new InvalidArgumentException('Custom HTML block requires content.');
+        }
+
+        $attributes = $this->attributes($attrs, ['align', 'className']);
+        $fragmentId = $this->customHtmlFragmentId($html);
+        if ($fragmentId !== null) {
+            $attributes['id'] = $fragmentId;
+        }
+
+        return new PageBlock(
+            id: $this->blockId($block, 'html', $index),
+            type: BlockType::CONTAINER,
+            data: new BasicBlockData(
+                html: $html,
+                layout: 'html',
+                customCss: $this->customCss($attrs['style']['css'] ?? null),
+                attributes: $attributes,
+            ),
+            style: $this->styleFromAttrs($attrs),
+            element: 'div',
         );
     }
 
@@ -1225,6 +1262,11 @@ final class BasicBlockMapper implements BlockMapper
             }
         }
 
+        $anchor = $this->optionalString($attrs, 'anchor');
+        if ($anchor !== null && preg_match('/^[A-Za-z][A-Za-z0-9_-]*$/', $anchor)) {
+            $attributes['id'] = $anchor;
+        }
+
         return $attributes;
     }
 
@@ -1307,6 +1349,58 @@ final class BasicBlockMapper implements BlockMapper
         }
 
         return trim($html) !== '' ? trim($html) : null;
+    }
+
+    /**
+     * Return a safe subset of a native Gutenberg Custom HTML block.
+     * IDs are explicitly preserved because they are used by menu fragment links.
+     *
+     * @param array<string, mixed> $block
+     */
+    private function customHtml(array $block): ?string
+    {
+        if (!isset($block['innerHTML']) || !is_string($block['innerHTML'])) {
+            return null;
+        }
+
+        $html = trim($block['innerHTML']);
+
+        if (function_exists('wp_kses')) {
+            $html = wp_kses($html, [
+                'a' => [
+                    'id' => true,
+                    'class' => true,
+                    'href' => true,
+                    'target' => true,
+                    'rel' => true,
+                    'title' => true,
+                    'aria-label' => true,
+                ],
+                'br' => [],
+                'div' => ['id' => true, 'class' => true],
+                'em' => [],
+                'i' => [],
+                'mark' => [],
+                'p' => ['id' => true, 'class' => true],
+                's' => [],
+                'span' => ['id' => true, 'class' => true],
+                'strong' => [],
+                'u' => [],
+            ]);
+        } else {
+            $html = strip_tags($html, '<a><br><div><em><i><mark><p><s><span><strong><u>');
+        }
+
+        return trim($html) !== '' ? trim($html) : null;
+    }
+
+    private function customHtmlFragmentId(string $html): ?string
+    {
+        if (!preg_match('/<a\b[^>]*\bid\s*=\s*(["\'])([A-Za-z][A-Za-z0-9_-]*)\1[^>]*>/i', $html, $matches)) {
+            return null;
+        }
+
+        return $matches[2];
     }
 
     /**

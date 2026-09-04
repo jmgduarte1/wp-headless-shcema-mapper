@@ -240,6 +240,31 @@ final class BasicBlockMapperTest extends TestCase
         self::assertArrayNotHasKey('width', $image->style?->properties ?? []);
     }
 
+    public function testMapsCustomHtmlAndPreservesFragmentAnchor(): void
+    {
+        $block = (new BasicBlockMapper())->map([
+            'blockName' => 'core/html',
+            'attrs' => [],
+            'innerHTML' => '<a id="expertise"></a>',
+        ]);
+
+        self::assertSame(BlockType::CONTAINER, $block->type);
+        self::assertSame('div', $block->element);
+        self::assertSame('html', $block->data->layout);
+        self::assertSame('<a id="expertise"></a>', $block->data->html);
+    }
+
+    public function testMapsGutenbergHtmlAnchorToElementId(): void
+    {
+        $block = (new BasicBlockMapper())->map([
+            'blockName' => 'core/group',
+            'attrs' => ['anchor' => 'expertise'],
+            'innerBlocks' => [],
+        ]);
+
+        self::assertSame('expertise', $block->data->attributes['id']);
+    }
+
     public function testMapsSeparatorAndGridGroup(): void
     {
         $mapper = new BasicBlockMapper();
