@@ -109,17 +109,28 @@ final class BasicBlockMapper implements BlockMapper
 
         if ($layout === 'grid') {
             $layoutAttrs = is_array($attrs['layout'] ?? null) ? $attrs['layout'] : [];
-            $columnCount = isset($layoutAttrs['columnCount']) && is_int($layoutAttrs['columnCount'])
+            $childCount = count($this->listOfBlocks($block['innerBlocks'] ?? []));
+            $columnCount = isset($layoutAttrs['columnCount']) && is_numeric($layoutAttrs['columnCount'])
                 ? $layoutAttrs['columnCount']
-                : count($this->listOfBlocks($block['innerBlocks'] ?? []));
+                : ($childCount > 0 ? $childCount : null);
+            $minimumColumnWidth = is_string($layoutAttrs['minimumColumnWidth'] ?? null)
+                && trim($layoutAttrs['minimumColumnWidth']) !== ''
+                ? trim($layoutAttrs['minimumColumnWidth'])
+                : null;
             $mobileColumnCount = $this->nestedInt($attrs, ['style', '@mobile', 'layout', 'columnCount']);
             $tabletColumnCount = $this->nestedInt($attrs, ['style', '@tablet', 'layout', 'columnCount']);
 
-            if ($columnCount > 0) {
+            if ($columnCount !== null || $minimumColumnWidth !== null) {
                 $properties = $style !== null ? $style->properties : [];
-                $desktopColumns = sprintf('repeat(%d, minmax(0, 1fr))', $columnCount);
-                $mobileColumns = sprintf('repeat(%d, minmax(0, 1fr))', $mobileColumnCount ?? $columnCount);
-                $tabletColumns = sprintf('repeat(%d, minmax(0, 1fr))', $tabletColumnCount ?? $mobileColumnCount ?? $columnCount);
+                $desktopColumns = $minimumColumnWidth !== null
+                    ? sprintf('repeat(%s, minmax(min(%s, 100%%), 1fr))', !empty($layoutAttrs['autoFit']) ? 'auto-fit' : 'auto-fill', $minimumColumnWidth)
+                    : sprintf('repeat(%d, minmax(0, 1fr))', $columnCount);
+                $mobileColumns = $mobileColumnCount !== null
+                    ? sprintf('repeat(%d, minmax(0, 1fr))', $mobileColumnCount)
+                    : $desktopColumns;
+                $tabletColumns = $tabletColumnCount !== null
+                    ? sprintf('repeat(%d, minmax(0, 1fr))', $tabletColumnCount)
+                    : ($mobileColumnCount !== null ? $mobileColumns : $desktopColumns);
                 $properties['gridTemplateColumns'] = $mobileColumnCount !== null || $tabletColumnCount !== null
                     ? ['mobile' => $mobileColumns, 'tablet' => $tabletColumns, 'desktop' => $desktopColumns]
                     : $desktopColumns;
@@ -134,6 +145,8 @@ final class BasicBlockMapper implements BlockMapper
                 layout: $layout,
                 customCss: $this->customCss($attrs['style']['css'] ?? null),
                 attributes: $attributes,
+                grid: $layout === 'grid' ? $this->gridLayout($attrs, count($this->listOfBlocks($block['innerBlocks'] ?? []))) : null,
+                responsiveSlider: $layout === 'grid' ? $this->responsiveSlider($attrs) : null,
             ),
             style: $style,
             element: $element,
@@ -550,6 +563,7 @@ final class BasicBlockMapper implements BlockMapper
             style: $this->coverStyle($attrs),
             element: 'div',
             children: array_merge($children, $this->mapChildren($block)),
+            align: $this->optionalString($attrs, 'align') ?? 'none',
         );
     }
 
@@ -935,11 +949,85 @@ final class BasicBlockMapper implements BlockMapper
      */
     private function coverImageStyle(array $attrs): ?BlockStyle
     {
+        $properties = [
+            'height' => '100%',
+            'objectFit' => 'cover',
+            'position' => 'absolute',
+            'width' => '100%',
+        ];
         $aspectRatio = $this->nestedString($attrs, ['style', 'dimensions', 'aspectRatio']);
 
-        return $aspectRatio !== null
-            ? new BlockStyle('cover-image', ['aspectRatio' => $aspectRatio])
+        if ($aspectRatio !== null) {
+            $properties['aspectRatio'] = $aspectRatio;
+        }
+
+        return new BlockStyle('cover-image', $properties);
+    }
+
+    /**
+     * @param array<string, mixed> $attrs
+     * @return array<string, string|int|bool>|null
+     */
+    private function gridLayout(array $attrs, int $childCount): ?array
+    {
+        $layout = is_array($attrs['layout'] ?? null) ? $attrs['layout'] : [];
+        $columnCount = isset($layout['columnCount']) && is_numeric($layout['columnCount'])
+            ? max(1, (int) $layout['columnCount'])
             : null;
+        $minimumColumnWidth = is_string($layout['minimumColumnWidth'] ?? null)
+            && preg_match('/^(?:\d+(?:\.\d+)?)(?:px|rem|em)$/', trim($layout['minimumColumnWidth']))
+            ? trim($layout['minimumColumnWidth'])
+            : null;
+
+        if ($columnCount === null && $minimumColumnWidth === null && $childCount === 0) {
+            return null;
+        }
+
+        $grid = [
+            'mode' => $minimumColumnWidth !== null ? 'auto' : 'manual',
+            'autoFit' => ($layout['autoFit'] ?? false) === true,
+        ];
+        if ($columnCount !== null) {
+            $grid['columnCount'] = $columnCount;
+        }
+        if ($minimumColumnWidth !== null) {
+            $grid['minimumColumnWidth'] = $minimumColumnWidth;
+        }
+
+        return $grid;
+    }
+
+    /**
+     * @param array<string, mixed> $attrs
+     * @return array<string, int|bool>|null
+     */
+    private function responsiveSlider(array $attrs): ?array
+    {
+        $keys = [
+            'headlessSliderEnabled', 'headlessMinColumnWidth', 'headlessSliderNavigation',
+            'headlessSliderPagination', 'headlessSliderLoop', 'headlessSliderAutoplay',
+            'headlessSliderAutoplayDelay',
+        ];
+
+        if (array_intersect($keys, array_keys($attrs)) === []) {
+            return null;
+        }
+
+        $integer = static function (mixed $value, int $default, int $min, int $max): int {
+            $value = is_numeric($value) ? (int) $value : $default;
+            return max($min, min($max, $value));
+        };
+        $boolean = static fn (mixed $value, bool $default): bool => is_bool($value) ? $value : $default;
+
+        return [
+            'enabled' => $boolean($attrs['headlessSliderEnabled'] ?? null, false),
+            'minColumnWidth' => $integer($attrs['headlessMinColumnWidth'] ?? null, 280, 120, 800),
+            'navigation' => $boolean($attrs['headlessSliderNavigation'] ?? null, true),
+            'pagination' => $boolean($attrs['headlessSliderPagination'] ?? null, true),
+            'loop' => $boolean($attrs['headlessSliderLoop'] ?? null, false),
+            'autoplay' => $boolean($attrs['headlessSliderAutoplay'] ?? null, false),
+            'autoplayDelay' => $integer($attrs['headlessSliderAutoplayDelay'] ?? null, 5000, 1000, 60000),
+        ];
     }
 
     /**
@@ -1120,6 +1208,16 @@ final class BasicBlockMapper implements BlockMapper
         if ($layout === 'grid') {
             $properties['display'] = 'grid';
             $properties['gap'] ??= 'var(--wp--style--block-gap, 1.2rem)';
+        }
+
+        $gridPlacement = is_array($attrs['style']['layout'] ?? null) ? $attrs['style']['layout'] : [];
+        foreach (['columnSpan', 'rowSpan', 'columnStart', 'rowStart'] as $property) {
+            $value = $this->nestedResponsiveValue($attrs, ['style', 'layout', $property]);
+            if ($value !== null) {
+                $properties[$property] = $value;
+            } elseif (isset($gridPlacement[$property]) && (is_string($gridPlacement[$property]) || is_int($gridPlacement[$property]) || is_float($gridPlacement[$property]))) {
+                $properties[$property] = $this->normalizeWordPressStyleValue($gridPlacement[$property]);
+            }
         }
 
         if (($layout === 'details' || $layout === 'accordion-item') && !isset($properties['margin'])) {

@@ -571,7 +571,35 @@ Example:
 
 ---
 
-# 20. Slider Block
+# 20. Responsive Grid Container
+
+WordPress `core/group` blocks using the Grid variation normalize as a `container` with `data.layout: "grid"`. Direct children remain the Grid items. The optional `grid` object describes the native Grid configuration; the optional `responsiveSlider` object enables browser-only Swiper enhancement when the measured container can no longer preserve the configured minimum slide width.
+
+```ts
+export interface ResponsiveGridData {
+  grid?: {
+    mode?: 'auto' | 'manual';
+    columnCount?: number;
+    minimumColumnWidth?: string;
+    autoFit?: boolean;
+  };
+  responsiveSlider?: {
+    enabled?: boolean;
+    minColumnWidth?: number;
+    navigation?: boolean;
+    pagination?: boolean;
+    loop?: boolean;
+    autoplay?: boolean;
+    autoplayDelay?: number;
+  };
+}
+```
+
+When `responsiveSlider.enabled` is false or absent, the container MUST remain a native wrapping Grid. When enabled, the slider MUST activate only when the measured container width is below the required width for its direct children. Explicit Grid placement that cannot be represented as slides MUST retain native Grid rendering.
+
+---
+
+# 21. Slider Block
 
 ```ts
 export interface SliderBlockData {

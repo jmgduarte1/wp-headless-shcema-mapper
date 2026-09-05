@@ -434,6 +434,20 @@ final class BasicBlockMapperTest extends TestCase
         self::assertSame('cover', $image->style?->properties['objectFit']);
     }
 
+    public function testMapsCoverAlignmentAtPageBlockLevel(): void
+    {
+        $cover = (new BasicBlockMapper())->map([
+            'blockName' => 'core/cover',
+            'attrs' => [
+                'align' => 'full',
+                'url' => 'https://example.com/cover.webp',
+            ],
+        ]);
+
+        self::assertSame('full', $cover->align);
+        self::assertSame('full', $cover->data->attributes['align']);
+    }
+
     public function testMapsBlockShadowFromGutenbergStyle(): void
     {
         $block = (new BasicBlockMapper())->map([

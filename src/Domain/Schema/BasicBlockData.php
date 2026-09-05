@@ -8,6 +8,8 @@ final readonly class BasicBlockData
 {
     /**
      * @param array<string, string|int|float|bool|array<string, string|int|float|bool>> $attributes
+     * @param array<string, string|int|bool>|null $grid
+     * @param array<string, int|bool>|null $responsiveSlider
      */
     public function __construct(
         public ?string $text = null,
@@ -26,6 +28,8 @@ final readonly class BasicBlockData
         public ?string $layout = null,
         public ?string $customCss = null,
         public array $attributes = [],
+        public ?array $grid = null,
+        public ?array $responsiveSlider = null,
     ) {
     }
 }
