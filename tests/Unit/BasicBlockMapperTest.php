@@ -466,13 +466,17 @@ final class BasicBlockMapperTest extends TestCase
     {
         $tabs = (new BasicBlockMapper())->map([
             'blockName' => 'core/tabs',
+            'attrs' => [
+                'headlessTabsOrientation' => 'vertical',
+                'headlessTabsTitle' => 'Expertise areas',
+            ],
             'innerBlocks' => [
                 [
                     'blockName' => 'core/tab-panels',
                     'innerBlocks' => [
                         [
                             'blockName' => 'core/tab-panel',
-                            'attrs' => ['label' => 'Overview'],
+                            'attrs' => ['label' => 'Overview', 'headlessTabIcon' => 'code'],
                             'innerBlocks' => [
                                 ['blockName' => 'core/paragraph', 'attrs' => ['content' => 'Panel content']],
                             ],
@@ -483,7 +487,10 @@ final class BasicBlockMapperTest extends TestCase
         ]);
 
         self::assertSame(BlockType::TABS, $tabs->type);
+        self::assertSame('vertical', $tabs->data->orientation);
+        self::assertSame('Expertise areas', $tabs->data->title);
         self::assertSame('Overview', $tabs->data->tabs[0]['label']);
+        self::assertSame('code', $tabs->data->tabs[0]['icon']);
         self::assertSame(BlockType::TEXT, $tabs->data->tabs[0]['blocks'][0]->type);
     }
 

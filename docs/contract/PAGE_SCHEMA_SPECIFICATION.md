@@ -599,7 +599,29 @@ When `responsiveSlider.enabled` is false or absent, the container MUST remain a 
 
 ---
 
-# 21. Slider Block
+# 21. Tabs Block
+
+WordPress `core/tabs` blocks normalize to an interactive `tabs` block. The optional `title` is rendered above the tab list. `orientation` defaults to `horizontal`; `vertical` renders the tab list beside the active panel on larger viewports and falls back to a horizontally scrollable list on small screens. Each tab may provide an optional Material Icons name in `icon`.
+
+```ts
+export interface TabsBlockData {
+  title?: string;
+  orientation?: 'horizontal' | 'vertical';
+  tabs: Array<{
+    id: string;
+    label: string;
+    icon?: string;
+    blocks: PageBlock[];
+  }>;
+  activeIndex?: number;
+}
+```
+
+The renderer MUST preserve tabs without these optional fields as horizontal tabs with no title or icons. Icon names MUST contain only letters, numbers, underscores, or hyphens and are rendered using Material Icons.
+
+---
+
+# 22. Slider Block
 
 ```ts
 export interface SliderBlockData {

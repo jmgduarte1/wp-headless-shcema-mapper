@@ -3,7 +3,7 @@
   const { createHigherOrderComponent } = wp.compose;
   const { InspectorControls } = wp.blockEditor;
   const { getBlockVariations, registerBlockVariation } = wp.blocks;
-  const { PanelBody, RangeControl, ToggleControl } = wp.components;
+  const { PanelBody, RangeControl, SelectControl, TextControl, ToggleControl } = wp.components;
   const { Fragment, createElement } = wp.element;
   const { useSelect } = wp.data;
   const domReady = wp.domReady;
@@ -62,5 +62,45 @@
     );
   }, 'withHeadlessGridControls');
 
+  const withHeadlessTabsControls = createHigherOrderComponent((BlockEdit) => (props) => {
+    const isTabs = props.name === 'core/tabs';
+    const isTabPanel = props.name === 'core/tab-panel';
+    if (!isTabs && !isTabPanel) return createElement(BlockEdit, props);
+
+    const attrs = props.attributes || {};
+    const set = (key, value) => props.setAttributes({ [key]: value });
+    const controls = isTabs
+      ? createElement(PanelBody, { title: 'Headless Tabs', initialOpen: false },
+          createElement(SelectControl, {
+            label: 'Orientation',
+            value: attrs.headlessTabsOrientation || 'horizontal',
+            options: [
+              { label: 'Horizontal', value: 'horizontal' },
+              { label: 'Vertical', value: 'vertical' },
+            ],
+            onChange: (value) => set('headlessTabsOrientation', value),
+          }),
+          createElement(TextControl, {
+            label: 'General title',
+            value: attrs.headlessTabsTitle || '',
+            onChange: (value) => set('headlessTabsTitle', value),
+          }),
+        )
+      : createElement(PanelBody, { title: 'Headless Tab', initialOpen: false },
+          createElement(TextControl, {
+            label: 'Material icon',
+            help: 'Use a Material Icons name, for example code or cloud.',
+            value: attrs.headlessTabIcon || '',
+            onChange: (value) => set('headlessTabIcon', value.replace(/[^A-Za-z0-9_-]/g, '')),
+          }),
+        );
+
+    return createElement(Fragment, null,
+      createElement(BlockEdit, props),
+      createElement(InspectorControls, null, controls),
+    );
+  }, 'withHeadlessTabsControls');
+
   addFilter('editor.BlockEdit', 'headless-angular/responsive-grid', withHeadlessGridControls);
+  addFilter('editor.BlockEdit', 'headless-angular/tabs', withHeadlessTabsControls);
 })(window.wp);

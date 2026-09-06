@@ -31,8 +31,28 @@ final class Plugin
     {
         add_action('init', [$this, 'registerBlocks']);
         add_filter('register_block_type_args', [$this, 'extendGroupBlock'], 10, 2);
+        add_filter('register_block_type_args', [$this, 'extendTabsBlock'], 10, 2);
         add_action('enqueue_block_editor_assets', [$this, 'enqueueEditorAssets']);
         add_action('rest_api_init', [$this, 'registerRestRoutes']);
+    }
+
+    /** @param array<string, mixed> $args */
+    public function extendTabsBlock(array $args, string $blockType): array
+    {
+        if ($blockType === 'core/tabs') {
+            $args['attributes'] = array_merge($args['attributes'] ?? [], [
+                'headlessTabsOrientation' => ['type' => 'string', 'default' => 'horizontal'],
+                'headlessTabsTitle' => ['type' => 'string', 'default' => ''],
+            ]);
+        }
+
+        if ($blockType === 'core/tab-panel') {
+            $args['attributes'] = array_merge($args['attributes'] ?? [], [
+                'headlessTabIcon' => ['type' => 'string', 'default' => ''],
+            ]);
+        }
+
+        return $args;
     }
 
     /** @param array<string, mixed> $args */

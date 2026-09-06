@@ -86,10 +86,13 @@ final class V1PageSchemaSerializer implements PageSchemaSerializer
                     fn (array $tab): array => [
                         'id' => $tab['id'],
                         'label' => $tab['label'],
+                        ...((isset($tab['icon']) && is_string($tab['icon'])) ? ['icon' => $tab['icon']] : []),
                         'blocks' => array_map(fn (PageBlock $child): array => $this->serializeBlock($child), $tab['blocks']),
                     ],
                     $block->data->tabs,
                 ),
+                'orientation' => $block->data->orientation,
+                ...($block->data->title !== null ? ['title' => $block->data->title] : []),
                 'activeIndex' => $block->data->activeIndex,
             ];
         } elseif ($block->data instanceof BasicBlockData) {

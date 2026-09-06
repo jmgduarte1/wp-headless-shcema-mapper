@@ -438,6 +438,11 @@ final class BasicBlockMapper implements BlockMapper
     private function mapTabs(array $block, int $index = 0): PageBlock
     {
         $attrs = $this->attrs($block);
+        $orientation = $this->optionalString($attrs, 'headlessTabsOrientation');
+        if (!in_array($orientation, ['horizontal', 'vertical'], true)) {
+            $orientation = 'horizontal';
+        }
+        $title = $this->optionalString($attrs, 'headlessTabsTitle');
         $panels = [];
         foreach ($this->listOfBlocks($block['innerBlocks'] ?? []) as $container) {
             if (($container['blockName'] ?? null) !== 'core/tab-panels') {
@@ -448,11 +453,16 @@ final class BasicBlockMapper implements BlockMapper
                 if (($panel['blockName'] ?? null) !== 'core/tab-panel') {
                     continue;
                 }
-                $attrs = $this->attrs($panel);
-                $label = $this->optionalString($attrs, 'label') ?? 'Tab ' . ($panelIndex + 1);
+                $panelAttrs = $this->attrs($panel);
+                $label = $this->optionalString($panelAttrs, 'label') ?? 'Tab ' . ($panelIndex + 1);
+                $icon = $this->optionalString($panelAttrs, 'headlessTabIcon');
+                if ($icon !== null && !preg_match('/^[A-Za-z0-9_-]+$/', $icon)) {
+                    $icon = null;
+                }
                 $panels[] = [
                     'id' => $this->blockId($panel, 'tab-panel', $panelIndex),
                     'label' => $label,
+                    ...($icon !== null ? ['icon' => $icon] : []),
                     'blocks' => $this->mapNestedBasicBlocks($panel['innerBlocks'] ?? []),
                 ];
             }
@@ -465,7 +475,7 @@ final class BasicBlockMapper implements BlockMapper
         return new PageBlock(
             id: $this->blockId($block, 'tabs', $index),
             type: BlockType::TABS,
-            data: new TabsData($panels),
+            data: new TabsData($panels, $orientation, $title),
             style: $this->styleFromAttrs($attrs),
             element: 'section',
         );
