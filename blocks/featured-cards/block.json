@@ -9,6 +9,7 @@
   "description": "A repeatable collection of featured cards for the headless PageSchema.",
   "textdomain": "headless-angular-schema",
   "attributes": {
+    "filtersEnabled": { "type": "boolean", "default": false },
     "cards": {
       "type": "array",
       "default": [

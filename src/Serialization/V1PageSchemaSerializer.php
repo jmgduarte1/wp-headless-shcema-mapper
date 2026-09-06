@@ -68,6 +68,9 @@ final class V1PageSchemaSerializer implements PageSchemaSerializer
             $payload['data'] = $this->serializeHeroData($block->data);
         } elseif ($block->type === BlockType::FEATURED_CARDS && $block->data instanceof FeaturedCardsData) {
             $payload['data'] = ['cards' => array_map(fn (array $card): array => $this->serializeFeaturedCard($card), $block->data->cards)];
+            if ($block->data->filtersEnabled) {
+                $payload['data']['filtersEnabled'] = true;
+            }
         } elseif ($block->type === BlockType::TIMELINE && $block->data instanceof TimelineData) {
             $payload['data'] = ['periods' => array_map(function(array $period): array { if(isset($period['style'])&&is_array($period['style'])) $period['style']=['properties'=>$period['style']]; return $period; },$block->data->periods), 'eyebrow'=>$block->data->eyebrow, 'title'=>$block->data->title, 'linkLabel'=>$block->data->linkLabel, 'linkUrl'=>$block->data->linkUrl, 'linkPosition'=>$block->data->linkPosition];
         } elseif ($block->type === BlockType::FORM && $block->data instanceof FormData) {

@@ -43,6 +43,16 @@
         onChange: function (text) { update({ text: text }); }
       }),
       el(TextControl, {
+        label: __('Eyebrow / credential date', 'headless-angular-schema'), value: card.eyebrow || '',
+        onChange: function (eyebrow) { update({ eyebrow: eyebrow }); }
+      }),
+      el(TextControl, {
+        label: __('Categories', 'headless-angular-schema'),
+        help: __('Comma-separated categories used by the optional filters. A card can belong to several categories.', 'headless-angular-schema'),
+        value: (card.categories || []).join(', '),
+        onChange: function (value) { update({ categories: Array.from(new Set(value.split(',').map(function (category) { return category.trim(); }).filter(Boolean))) }); }
+      }),
+      el(TextControl, {
         label: __('Tags', 'headless-angular-schema'), help: __('Comma-separated tags', 'headless-angular-schema'),
         value: (card.tags || []).join(', '),
         onChange: function (tags) { update({ tags: tags.split(',').map(function (tag) { return tag.trim(); }).filter(Boolean) }); }
@@ -76,6 +86,10 @@
       return el(Fragment, {},
         el(InspectorControls, {},
           el(PanelBody, { title: __('Featured cards', 'headless-angular-schema'), initialOpen: true },
+            el(components.ToggleControl, {
+              label: __('Enable category filters', 'headless-angular-schema'), checked: !!props.attributes.filtersEnabled,
+              onChange: function (enabled) { setAttributes({ filtersEnabled: enabled }); }
+            }),
             el(SelectControl, {
               label: __('Card count', 'headless-angular-schema'), value: String(cards.length),
               options: Array.from({ length: Math.max(cards.length, 12) }, function (_, i) { return { label: String(i + 1), value: String(i + 1) }; }),
@@ -95,6 +109,7 @@
             return el('article', { className: 'headless-featured-card', key: card.id || index },
               el('div', { className: 'headless-featured-card__media' }, card.image && card.image.url ? el('img', { src: card.image.url, alt: card.image.alt || '' }) : el('span', { className: 'dashicons dashicons-' + (card.icon || 'star-filled') })),
               el('h3', {}, card.title || __('Card title', 'headless-angular-schema')),
+              card.eyebrow && el('p', {}, card.eyebrow),
               el('div', { className: 'headless-featured-card__tags' }, (card.tags || []).map(function (tag) { return el('span', { key: tag }, tag); })),
               el('p', {}, card.text || __('Card description', 'headless-angular-schema'))
             );

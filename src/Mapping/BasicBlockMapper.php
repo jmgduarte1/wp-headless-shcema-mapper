@@ -251,6 +251,23 @@ final class BasicBlockMapper implements BlockMapper
                 'text' => $text,
             ];
 
+            $eyebrow = $this->optionalString($rawCard, 'eyebrow');
+            if ($eyebrow !== null) {
+                $card['eyebrow'] = $eyebrow;
+            }
+            if (is_array($rawCard['categories'] ?? null)) {
+                $categories = [];
+                foreach ($rawCard['categories'] as $category) {
+                    if (is_string($category)) {
+                        $category = trim(strip_tags($category));
+                        if ($category !== '') {
+                            $categories[] = $category;
+                        }
+                    }
+                }
+                $card['categories'] = array_values(array_unique($categories));
+            }
+
             $icon = $this->optionalString($rawCard, 'icon');
             if ($icon !== null && preg_match('/^[A-Za-z0-9_-]+$/', $icon)) {
                 $card['icon'] = $icon;
@@ -284,7 +301,7 @@ final class BasicBlockMapper implements BlockMapper
         return new PageBlock(
             id: $this->blockId($block, 'featured-cards', $index),
             type: BlockType::FEATURED_CARDS,
-            data: new FeaturedCardsData($cards),
+            data: new FeaturedCardsData($cards, ($attrs['filtersEnabled'] ?? false) === true),
             style: $this->styleFromAttrs($attrs),
             element: 'section',
         );

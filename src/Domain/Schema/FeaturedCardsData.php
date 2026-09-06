@@ -9,7 +9,7 @@ final readonly class FeaturedCardsData
     /**
      * @param list<array<string, mixed>> $cards
      */
-    public function __construct(public array $cards)
+    public function __construct(public array $cards, public bool $filtersEnabled = false)
     {
     }
 }

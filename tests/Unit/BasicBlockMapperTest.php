@@ -380,6 +380,21 @@ final class BasicBlockMapperTest extends TestCase
         self::assertSame('CodeXml', $block->data->cards[0]['icon']);
         self::assertSame(['TypeScript', 'Angular'], $block->data->cards[0]['tags']);
         self::assertSame('https://example.com/commerce.webp', $block->data->cards[1]['image']['src']);
+        self::assertFalse($block->data->filtersEnabled);
+    }
+
+    public function testNormalizesOptionalFeaturedCardCategories(): void
+    {
+        $block = (new BasicBlockMapper())->map([
+            'blockName' => 'headless-angular/featured-cards',
+            'attrs' => ['filtersEnabled' => true, 'cards' => [[
+                'title' => 'Testing', 'text' => 'Course', 'tags' => [], 'eyebrow' => '2026',
+                'categories' => [' Angular ', '<b>Testing</b>', 'Angular', '', 42, '<b></b>'],
+            ]]],
+        ]);
+        self::assertTrue($block->data->filtersEnabled);
+        self::assertSame(['Angular', 'Testing'], $block->data->cards[0]['categories']);
+        self::assertSame('2026', $block->data->cards[0]['eyebrow']);
     }
 
     public function testPreservesResponsiveTypographyAndSpacing(): void
