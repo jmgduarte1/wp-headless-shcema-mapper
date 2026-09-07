@@ -316,7 +316,7 @@ final class BasicBlockMapper implements BlockMapper
             $start=$this->optionalString($raw,'start'); $end=$this->optionalString($raw,'end'); $title=$this->optionalString($raw,'title'); $text=$this->optionalString($raw,'text');
             if ($start===null || $end===null || $title===null || $text===null) continue;
             $tags=[]; foreach (is_array($raw['tags']??null)?$raw['tags']:[] as $tag) if(is_string($tag)&&trim($tag)!=='') $tags[]=trim(strip_tags($tag));
-            $periods[]=['id'=>$this->optionalString($raw,'id')??'period-'.$periodIndex,'start'=>$start,'end'=>$end,'title'=>$title,'text'=>$text,'tags'=>$tags];
+            $periods[]=['id'=>$this->optionalString($raw,'id')??'period-'.$periodIndex,'start'=>$start,'end'=>$end,'title'=>$title,'company'=>$this->optionalString($raw,'company'),'text'=>$text,'tags'=>$tags];
             if (is_string($raw['metric'] ?? null) && trim($raw['metric']) !== '') $periods[array_key_last($periods)]['metric'] = trim(strip_tags($raw['metric']));
             if (is_bool($raw['compact'] ?? null)) $periods[array_key_last($periods)]['compact'] = $raw['compact'];
             if (is_bool($raw['expanded'] ?? null)) $periods[array_key_last($periods)]['expanded'] = $raw['expanded'];
