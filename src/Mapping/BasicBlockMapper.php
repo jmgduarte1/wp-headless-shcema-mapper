@@ -666,7 +666,7 @@ final class BasicBlockMapper implements BlockMapper
     {
         $attrs = $this->attrs($block);
         $text = $this->optionalString($attrs, 'text') ?? $this->blockText($block);
-        $href = $this->optionalString($attrs, 'url');
+        $href = $this->optionalString($attrs, 'url') ?? $this->htmlAttribute($block, 'a', 'href');
 
         if ($text === null) {
             throw new InvalidArgumentException('Button block requires text.');
