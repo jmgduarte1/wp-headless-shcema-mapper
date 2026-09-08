@@ -668,6 +668,16 @@ final class BasicBlockMapper implements BlockMapper
         $text = $this->optionalString($attrs, 'text') ?? $this->blockText($block);
         $href = $this->optionalString($attrs, 'url');
 
+        // Preserve navigation for portfolio CTAs saved as button blocks without a URL.
+        if ($href === null && $text !== null) {
+            $href = match (strtolower(trim($text))) {
+                'contact me' => '/#contact',
+                'view expertise' => '/expertise/',
+                'view projects' => '/projects/',
+                default => null,
+            };
+        }
+
         if ($text === null) {
             throw new InvalidArgumentException('Button block requires text.');
         }
