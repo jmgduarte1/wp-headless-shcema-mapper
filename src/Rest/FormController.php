@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace HeadlessAngular\Schema\Rest;
 
+use Closure;
 use Throwable;
 use WP_Error;
 use WP_REST_Request;
@@ -58,22 +59,29 @@ final class FormController
         // entry persistence, notifications, and the complete hooks.
         try {
             $processor = wpforms()->obj('process');
-            if (!$processor || !method_exists($processor, 'process')) {
+            if (!is_object($processor) || !is_callable([$processor, 'process'])) {
                 return new WP_Error('headless_form_processor_unavailable', 'Form processor unavailable.', ['status' => 503]);
             }
+
+            /** @var object{errors: array<mixed>, form_data: mixed, fields: mixed, entry_id: mixed} $processor */
 
             $_POST['wpforms'] = $entry;
             // WPForms requires its native AJAX action when ajax submission is enabled.
             $_POST['action'] = 'wpforms_submit';
             $_POST['page_url'] = esc_url_raw((string) ($request->get_header('referer') ?: home_url('/')));
-            $processor->process($entry);
+            // WPForms exposes this processor method dynamically.
+            // @phpstan-ignore argument.type
+            $process = Closure::fromCallable([$processor, 'process']);
+            $process($entry);
 
             if (!empty($processor->errors[$formId])) {
                 $fieldErrors = [];
                 $generalErrors = [];
                 foreach ($processor->errors[$formId] as $fieldId => $error) {
                     $message = is_string($error) ? wp_strip_all_tags($error) : '';
-                    if ($message === '') continue;
+                    if ($message === '') {
+                        continue;
+                    }
                     if (in_array((string) $fieldId, ['header', 'footer', 'header_styled', 'footer_styled', 'recaptcha'], true)) {
                         $generalErrors[] = $message;
                     } else {

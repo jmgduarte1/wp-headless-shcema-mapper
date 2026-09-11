@@ -72,7 +72,11 @@ final class V1PageSchemaSerializer implements PageSchemaSerializer
                 $payload['data']['filtersEnabled'] = true;
             }
         } elseif ($block->type === BlockType::TIMELINE && $block->data instanceof TimelineData) {
-            $payload['data'] = ['periods' => array_map(function(array $period): array { if(isset($period['style'])&&is_array($period['style'])) $period['style']=['properties'=>$period['style']]; return $period; },$block->data->periods), 'eyebrow'=>$block->data->eyebrow, 'title'=>$block->data->title, 'linkLabel'=>$block->data->linkLabel, 'linkUrl'=>$block->data->linkUrl, 'linkPosition'=>$block->data->linkPosition];
+            $payload['data'] = ['periods' => array_map(function (array $period): array {
+                if (isset($period['style']) && is_array($period['style'])) {
+                    $period['style'] = ['properties' => $period['style']];
+                } return $period;
+            }, $block->data->periods), 'eyebrow' => $block->data->eyebrow, 'title' => $block->data->title, 'linkLabel' => $block->data->linkLabel, 'linkUrl' => $block->data->linkUrl, 'linkPosition' => $block->data->linkPosition];
         } elseif ($block->type === BlockType::FORM && $block->data instanceof FormData) {
             $payload['data'] = [
                 'formId' => $block->data->formId,

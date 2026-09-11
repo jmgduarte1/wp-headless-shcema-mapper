@@ -253,7 +253,14 @@ final class NavigationController
     {
         foreach ($items as &$item) {
             $children = is_array($item['children'] ?? null) ? $item['children'] : [];
-            $item['children'] = $this->materialItems($children);
+            $childItems = [];
+            foreach ($children as $child) {
+                if (is_array($child)) {
+                    /** @var array<string, mixed> $child */
+                    $childItems[] = $child;
+                }
+            }
+            $item['children'] = $this->materialItems($childItems);
             $item['hasChildren'] = $item['children'] !== [];
         }
         unset($item);

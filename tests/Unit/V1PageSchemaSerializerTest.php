@@ -114,5 +114,4 @@ final class V1PageSchemaSerializerTest extends TestCase
         self::assertSame(['title' => 'Hello'], $actual['page']['blocks'][0]['data']);
         self::assertArrayNotHasKey('style', $actual['page']['blocks'][0]);
     }
-
 }

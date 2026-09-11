@@ -310,21 +310,50 @@ final class BasicBlockMapper implements BlockMapper
     /** @param array<string, mixed> $block */
     private function mapTimeline(array $block, int $index = 0): PageBlock
     {
-        $attrs = $this->attrs($block); $periods = [];
+        $attrs = $this->attrs($block);
+        $periods = [];
         foreach (is_array($attrs['periods'] ?? null) ? $attrs['periods'] : [] as $periodIndex => $raw) {
-            if (!is_array($raw)) continue;
-            $start=$this->optionalString($raw,'start'); $end=$this->optionalString($raw,'end'); $title=$this->optionalString($raw,'title'); $text=$this->optionalString($raw,'text');
-            if ($start===null || $end===null || $title===null || $text===null) continue;
-            $tags=[]; foreach (is_array($raw['tags']??null)?$raw['tags']:[] as $tag) if(is_string($tag)&&trim($tag)!=='') $tags[]=trim(strip_tags($tag));
-            $periods[]=['id'=>$this->optionalString($raw,'id')??'period-'.$periodIndex,'start'=>$start,'end'=>$end,'title'=>$title,'company'=>$this->optionalString($raw,'company'),'text'=>$text,'tags'=>$tags];
-            if (is_string($raw['metric'] ?? null) && trim($raw['metric']) !== '') $periods[array_key_last($periods)]['metric'] = trim(strip_tags($raw['metric']));
-            if (is_bool($raw['compact'] ?? null)) $periods[array_key_last($periods)]['compact'] = $raw['compact'];
-            if (is_bool($raw['expanded'] ?? null)) $periods[array_key_last($periods)]['expanded'] = $raw['expanded'];
-            if(is_array($raw['style']??null)){ $style=$this->styleFromAttrs(['style'=>$raw['style']]); if($style!==null) $periods[array_key_last($periods)]['style']=$style->properties; }
+            if (!is_array($raw)) {
+                continue;
+            }
+            $start = $this->optionalString($raw, 'start');
+            $end = $this->optionalString($raw, 'end');
+            $title = $this->optionalString($raw, 'title');
+            $text = $this->optionalString($raw, 'text');
+            if ($start === null || $end === null || $title === null || $text === null) {
+                continue;
+            }
+            $tags = [];
+            foreach (is_array($raw['tags'] ?? null) ? $raw['tags'] : [] as $tag) {
+                if (is_string($tag) && trim($tag) !== '') {
+                    $tags[] = trim(strip_tags($tag));
+                }
+            }
+            $periods[] = ['id' => $this->optionalString($raw, 'id') ?? 'period-' . $periodIndex,'start' => $start,'end' => $end,'title' => $title,'company' => $this->optionalString($raw, 'company'),'text' => $text,'tags' => $tags];
+            if (is_string($raw['metric'] ?? null) && trim($raw['metric']) !== '') {
+                $periods[array_key_last($periods)]['metric'] = trim(strip_tags($raw['metric']));
+            }
+            if (is_bool($raw['compact'] ?? null)) {
+                $periods[array_key_last($periods)]['compact'] = $raw['compact'];
+            }
+            if (is_bool($raw['expanded'] ?? null)) {
+                $periods[array_key_last($periods)]['expanded'] = $raw['expanded'];
+            }
+            if (is_array($raw['style'] ?? null)) {
+                $style = $this->styleFromAttrs(['style' => $raw['style']]);
+                if ($style !== null) {
+                    $periods[array_key_last($periods)]['style'] = $style->properties;
+                }
+            }
         }
-        if($periods===[]) throw new InvalidArgumentException('Timeline requires at least one valid period.');
-        $position=$this->optionalString($attrs,'linkPosition')??'end'; if(!in_array($position,['start','center','end'],true)) $position='end';
-        return new PageBlock(id:$this->blockId($block,'timeline',$index),type:BlockType::TIMELINE,data:new TimelineData($periods,$this->optionalString($attrs,'eyebrow') ?? 'Experience',$this->optionalString($attrs,'title') ?? 'Recent leadership and delivery',$this->optionalString($attrs,'linkLabel'),$this->optionalString($attrs,'linkUrl'),$position),style:$this->styleFromAttrs($attrs),element:'section');
+        if ($periods === []) {
+            throw new InvalidArgumentException('Timeline requires at least one valid period.');
+        }
+        $position = $this->optionalString($attrs, 'linkPosition') ?? 'end';
+        if (!in_array($position, ['start','center','end'], true)) {
+            $position = 'end';
+        }
+        return new PageBlock(id:$this->blockId($block, 'timeline', $index), type:BlockType::TIMELINE, data:new TimelineData($periods, $this->optionalString($attrs, 'eyebrow') ?? '', $this->optionalString($attrs, 'title') ?? '', $this->optionalString($attrs, 'linkLabel'), $this->optionalString($attrs, 'linkUrl'), $position), style:$this->styleFromAttrs($attrs), element:'section');
     }
 
     /** @param array<string, mixed> $block */
@@ -667,7 +696,6 @@ final class BasicBlockMapper implements BlockMapper
         $attrs = $this->attrs($block);
         $text = $this->optionalString($attrs, 'text') ?? $this->blockText($block);
         $href = $this->optionalString($attrs, 'url') ?? $this->htmlAttribute($block, 'a', 'href');
-
         if ($text === null) {
             throw new InvalidArgumentException('Button block requires text.');
         }
@@ -977,7 +1005,7 @@ final class BasicBlockMapper implements BlockMapper
     /**
      * @param array<string, mixed> $attrs
      */
-    private function coverImageStyle(array $attrs): ?BlockStyle
+    private function coverImageStyle(array $attrs): BlockStyle
     {
         $properties = [
             'height' => '100%',

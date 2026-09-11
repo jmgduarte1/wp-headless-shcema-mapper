@@ -562,8 +562,7 @@ final class BasicBlockMapperTest extends TestCase
             ],
         ]);
 
-        self::assertSame('Experience', $timeline->data->eyebrow);
-        self::assertSame('Recent leadership and delivery', $timeline->data->title);
+        self::assertSame('', $timeline->data->eyebrow);
+        self::assertSame('', $timeline->data->title);
     }
-
 }

@@ -36,7 +36,10 @@ final class Plugin
         add_action('rest_api_init', [$this, 'registerRestRoutes']);
     }
 
-    /** @param array<string, mixed> $args */
+    /**
+     * @param array<string, mixed> $args
+     * @return array<string, mixed>
+     */
     public function extendTabsBlock(array $args, string $blockType): array
     {
         if ($blockType === 'core/tabs') {
@@ -55,7 +58,10 @@ final class Plugin
         return $args;
     }
 
-    /** @param array<string, mixed> $args */
+    /**
+     * @param array<string, mixed> $args
+     * @return array<string, mixed>
+     */
     public function extendGroupBlock(array $args, string $blockType): array
     {
         if ($blockType !== 'core/group') {
